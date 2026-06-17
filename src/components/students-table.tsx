@@ -4,22 +4,55 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useStudents, duplicatesOf } from "@/lib/students";
-import { staff, staffName } from "@/lib/staff";
-
-const employees = staff.filter((s) => s.role === "employee");
+import { useQuestions } from "@/lib/questions";
+import { useUsers, nameOf } from "@/lib/users";
 
 export function StudentsTable() {
   const { user, role } = useRole();
-  const { students: all, remove, removeMany, assignMany } = useStudents();
+  const { users } = useUsers();
+  const employees = users.filter((u) => u.role === "employee");
+  const {
+    students: all,
+    addStudent,
+    addStudentsBulk,
+    remove,
+    removeMany,
+    assignMany,
+  } = useStudents();
   const isAdmin = role === "admin";
 
+  const { questions } = useQuestions();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  // Filters keyed by question id (value "any" by default).
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const setFilter = (id: string, v: string) =>
+    setFilters((prev) => ({ ...prev, [id]: v }));
 
   // Admin sees every student; an employee sees only their assigned students.
-  const students = isAdmin
+  const roleList = isAdmin
     ? all
     : all.filter((s) => s.assignedTo === user.id);
+
+  // Apply the question filters.
+  const students = roleList.filter((s) => {
+    for (const q of questions) {
+      const f = filters[q.id] ?? "any";
+      if (f === "any") continue;
+      const answer = s.answers?.[q.id];
+      if (q.type === "yesno") {
+        if (f === "yes" && answer !== true) return false;
+        if (f === "no" && answer !== false) return false;
+      } else {
+        const arr = Array.isArray(answer) ? answer : [];
+        if (!arr.includes(f)) return false;
+      }
+    }
+    return true;
+  });
 
   function toggleOne(id: string) {
     setSelected((prev) => {
@@ -93,13 +126,82 @@ export function StudentsTable() {
             </button>
           </div>
         ) : (
-          <span className="text-sm text-slate-500">{students.length} total</span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-500">
+              {students.length} total
+            </span>
+            {isAdmin && (
+              <>
+                <button
+                  onClick={() => setBulkOpen(true)}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  Bulk upload
+                </button>
+                <button
+                  onClick={() => setAdding(true)}
+                  className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                >
+                  + Add student
+                </button>
+              </>
+            )}
+          </div>
         )}
       </div>
 
+      {/* Add-student form (admin) */}
+      {isAdmin && adding && (
+        <AddStudentForm
+          employees={employees}
+          onCancel={() => setAdding(false)}
+          onAdd={(data) => {
+            addStudent(data);
+            setAdding(false);
+          }}
+        />
+      )}
+
+      {/* Bulk upload (admin) */}
+      {isAdmin && bulkOpen && (
+        <BulkUploadPanel
+          onCancel={() => setBulkOpen(false)}
+          onImport={(list) => addStudentsBulk(list)}
+        />
+      )}
+
+      {/* Filters (generated from the configurable questions) */}
+      {questions.length > 0 && (
+        <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 px-5 py-3">
+          <span className="text-xs font-medium uppercase text-slate-400">
+            Filters
+          </span>
+          {questions.map((q) => (
+            <FilterSelect
+              key={q.id}
+              label={q.label}
+              value={filters[q.id] ?? "any"}
+              onChange={(v) => setFilter(q.id, v)}
+              options={
+                q.type === "yesno"
+                  ? [
+                      { v: "any", l: "Any" },
+                      { v: "yes", l: "Yes" },
+                      { v: "no", l: "No" },
+                    ]
+                  : [
+                      { v: "any", l: "Any" },
+                      ...(q.options ?? []).map((o) => ({ v: o, l: o })),
+                    ]
+              }
+            />
+          ))}
+        </div>
+      )}
+
       {students.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">
-          No students assigned to you yet.
+          No students match.
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -117,6 +219,8 @@ export function StudentsTable() {
                 </th>
               )}
               <th className="px-5 py-3 font-medium">Student</th>
+              <th className="px-5 py-3 font-medium">Phone</th>
+              <th className="px-5 py-3 font-medium">School</th>
               {isAdmin && (
                 <th className="px-5 py-3 font-medium">Assigned To</th>
               )}
@@ -145,16 +249,34 @@ export function StudentsTable() {
                     </td>
                   )}
                   <td className="px-5 py-3">
-                    <Link
-                      href={`/student/${s.id}`}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      {s.name}
-                    </Link>
+                    <span className="flex items-center gap-1.5">
+                      <Link
+                        href={`/student/${s.id}`}
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        {s.name}
+                      </Link>
+                      {s.answers?.scholarship === true && (
+                        <span
+                          title="Wants a scholarship"
+                          className="text-green-600"
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-slate-600">{s.phone}</td>
+                  <td className="px-5 py-3 text-slate-600">
+                    {s.school || "—"}
                   </td>
                   {isAdmin && (
                     <td className="px-5 py-3 text-slate-600">
-                      {staffName(s.assignedTo)}
+                      {s.assignedTo ? (
+                        nameOf(users, s.assignedTo)
+                      ) : (
+                        <span className="text-amber-600">Unassigned</span>
+                      )}
                     </td>
                   )}
                   <td className="px-5 py-3">
@@ -196,5 +318,271 @@ export function StudentsTable() {
         </div>
       )}
     </div>
+  );
+}
+
+// Minimal CSV parser that handles quoted fields and commas inside quotes.
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") {
+      row.push(field);
+      field = "";
+    } else if (c === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (c !== "\r") field += c;
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+
+type BulkRow = {
+  name: string;
+  phone: string;
+  school?: string;
+  assignedTo: string;
+};
+
+function BulkUploadPanel({
+  onImport,
+  onCancel,
+}: {
+  onImport: (list: BulkRow[]) => void;
+  onCancel: () => void;
+}) {
+  const [result, setResult] = useState("");
+
+  function downloadTemplate() {
+    const content =
+      "Name,Phone,School\n" + "Example Student,90001234,Example School\n";
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "students-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const text = String(reader.result ?? "");
+      const rows = parseCSV(text).filter((r) => r.some((c) => c.trim() !== ""));
+      // Drop the header row if it looks like one.
+      if (rows[0]?.[0]?.trim().toLowerCase() === "name") rows.shift();
+
+      const valid: BulkRow[] = [];
+      let skipped = 0;
+      for (const r of rows) {
+        const name = (r[0] ?? "").trim();
+        const phone = (r[1] ?? "").replace(/\D/g, "");
+        const school = (r[2] ?? "").trim();
+        if (!name || !/^\d{8}$/.test(phone)) {
+          skipped++;
+          continue;
+        }
+        // Imported unassigned — admin assigns afterwards.
+        valid.push({ name, phone, school, assignedTo: "" });
+      }
+      if (valid.length) onImport(valid);
+      setResult(
+        `Imported ${valid.length} student(s)` +
+          (skipped ? `, skipped ${skipped} invalid row(s).` : ".") +
+          (valid.length ? " They are unassigned — select them and assign." : "")
+      );
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="space-y-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+      <h3 className="font-semibold text-slate-800">Bulk upload students</h3>
+      <p className="text-sm text-slate-500">
+        Download the template, fill it in (columns:{" "}
+        <span className="font-medium">Name, Phone, School</span>), then upload
+        it. Name and an 8-digit Phone are required; School is optional.
+        Uploaded students come in <span className="font-medium">unassigned</span>
+        {" "}— select them in the list and use{" "}
+        <span className="font-medium">Assign</span> to give them to an employee.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={downloadTemplate}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+        >
+          ⬇ Download template
+        </button>
+        <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700">
+          Upload CSV
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleFile}
+            className="hidden"
+          />
+        </label>
+        <button
+          onClick={onCancel}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+        >
+          Close
+        </button>
+      </div>
+      {result && <p className="text-sm font-medium text-green-700">{result}</p>}
+    </div>
+  );
+}
+
+function AddStudentForm({
+  employees,
+  onAdd,
+  onCancel,
+}: {
+  employees: { id: string; name: string }[];
+  onAdd: (data: {
+    name: string;
+    phone: string;
+    school?: string;
+    assignedTo: string;
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [school, setSchool] = useState("");
+  const [assignedTo, setAssignedTo] = useState(employees[0]?.id ?? "");
+  const [error, setError] = useState("");
+
+  function submit() {
+    if (!name.trim()) return setError("Name is required.");
+    if (!/^\d{8}$/.test(phone)) return setError("Phone must be exactly 8 digits.");
+    if (!assignedTo) return setError("Please assign an employee.");
+    onAdd({ name: name.trim(), phone, school: school.trim(), assignedTo });
+  }
+
+  return (
+    <div className="space-y-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+      <h3 className="font-semibold text-slate-800">Add a student</h3>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            Name <span className="text-red-500">*</span>
+          </span>
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            Phone number (8 digits) <span className="text-red-500">*</span>
+          </span>
+          <input
+            value={phone}
+            inputMode="numeric"
+            maxLength={8}
+            onChange={(e) =>
+              setPhone(e.target.value.replace(/\D/g, "").slice(0, 8))
+            }
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            School name <span className="text-slate-400">(optional)</span>
+          </span>
+          <input
+            value={school}
+            onChange={(e) => setSchool(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            Assign to
+          </span>
+          <select
+            value={assignedTo}
+            onChange={(e) => setAssignedTo(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+          >
+            {employees.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
+
+      <div className="flex justify-end gap-2">
+        <button
+          onClick={onCancel}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={submit}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+        >
+          Add student
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function FilterSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: { v: string; l: string }[];
+}) {
+  return (
+    <label className="flex items-center gap-1.5 text-sm text-slate-600">
+      {label}:
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700"
+      >
+        {options.map((o) => (
+          <option key={o.v} value={o.v}>
+            {o.l}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }

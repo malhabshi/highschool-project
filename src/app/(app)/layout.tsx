@@ -1,3 +1,4 @@
+import { AuthGuard } from "@/components/auth-guard";
 import { RoleProvider } from "@/components/role-context";
 import { AppShell } from "@/components/app-shell";
 
@@ -7,8 +8,10 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   return (
-    <RoleProvider>
-      <AppShell>{children}</AppShell>
-    </RoleProvider>
+    <AuthGuard>
+      <RoleProvider>
+        <AppShell>{children}</AppShell>
+      </RoleProvider>
+    </AuthGuard>
   );
 }

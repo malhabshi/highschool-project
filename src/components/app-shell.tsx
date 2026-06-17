@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Sidebar } from "@/components/sidebar";
-import { RoleSwitcher } from "@/components/role-switcher";
+import { UserMenu } from "@/components/user-menu";
+import { NotificationBell } from "@/components/notification-bell";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -40,10 +41,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               ☰
             </button>
-            <RoleSwitcher />
+            <span className="text-lg font-bold tracking-tight text-slate-800 md:hidden">
+              Masar
+            </span>
           </div>
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
-            M
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <UserMenu />
           </div>
         </header>
 

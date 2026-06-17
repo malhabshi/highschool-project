@@ -1,25 +1,26 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext } from "react";
 import type { Role } from "@/lib/nav";
-import { staff, type Staff } from "@/lib/staff";
+import { useUsers, type User } from "@/lib/users";
+import { useSession } from "@/lib/auth";
 
 type RoleContextValue = {
-  user: Staff; // the person currently being viewed as
+  user: User; // the logged-in account
   role: Role; // convenience: user.role
-  setUserId: (id: string) => void;
 };
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
-// Temporary session provider for previewing before real login exists.
-// Once auth is added, `user` will come from the logged-in account instead.
+// Provides the logged-in user to the app. Wrapped by AuthGuard, so by the
+// time this renders there is always a valid session.
 export function RoleProvider({ children }: { children: React.ReactNode }) {
-  const [userId, setUserId] = useState("admin");
-  const user = staff.find((s) => s.id === userId) ?? staff[0];
+  const { users } = useUsers();
+  const { userId } = useSession();
+  const user = users.find((u) => u.id === userId) ?? users[0];
 
   return (
-    <RoleContext.Provider value={{ user, role: user.role, setUserId }}>
+    <RoleContext.Provider value={{ user, role: user.role }}>
       {children}
     </RoleContext.Provider>
   );

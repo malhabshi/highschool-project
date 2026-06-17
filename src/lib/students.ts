@@ -8,8 +8,12 @@ export type Student = {
   name: string;
   phone: string;
   school: string;
-  assignedTo: string; // staff id (see lib/staff.ts)
+  assignedTo: string; // user id (see lib/users.ts)
   deletionRequested?: boolean; // employee asked an admin to delete
+  notes?: string; // free-text notes from the employee
+  // Answers to the configurable questions, keyed by question id.
+  // yes/no questions store a boolean; multi questions store a string[].
+  answers?: Record<string, boolean | string[]>;
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -64,6 +68,50 @@ export function useStudents() {
     return () => window.removeEventListener("storage", onStorage);
   }, []);
 
+  // Create a new student (admin only — enforced in the UI).
+  const addStudent = useCallback(
+    (data: { name: string; phone: string; school?: string; assignedTo: string }) => {
+      setStudents((prev) => {
+        const next: Student[] = [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            name: data.name,
+            phone: data.phone,
+            school: data.school ?? "",
+            assignedTo: data.assignedTo,
+          },
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
+  // Add many students at once (bulk CSV upload).
+  const addStudentsBulk = useCallback(
+    (
+      list: { name: string; phone: string; school?: string; assignedTo: string }[]
+    ) => {
+      setStudents((prev) => {
+        const next: Student[] = [
+          ...prev,
+          ...list.map((d) => ({
+            id: crypto.randomUUID(),
+            name: d.name,
+            phone: d.phone,
+            school: d.school ?? "",
+            assignedTo: d.assignedTo,
+          })),
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
+    },
+    []
+  );
+
   const update = useCallback((id: string, patch: Partial<Omit<Student, "id">>) => {
     setStudents((prev) => {
       const next = prev.map((s) => (s.id === id ? { ...s, ...patch } : s));
@@ -116,6 +164,8 @@ export function useStudents() {
 
   return {
     students,
+    addStudent,
+    addStudentsBulk,
     update,
     requestDeletion,
     remove,
