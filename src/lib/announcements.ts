@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { uid } from "@/lib/uid";
 
 export type Announcement = {
   id: string;
@@ -43,7 +44,7 @@ export function useAnnouncements() {
     if (!trimmed) return;
     setAnnouncements((prev) => {
       const next: Announcement[] = [
-        { id: crypto.randomUUID(), text: trimmed, createdAt: Date.now() },
+        { id: uid(), text: trimmed, createdAt: Date.now() },
         ...prev,
       ];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

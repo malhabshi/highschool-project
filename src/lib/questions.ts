@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { uid } from "@/lib/uid";
 
 export type QuestionType = "yesno" | "multi";
 
@@ -61,7 +62,7 @@ export function useQuestions() {
   }
 
   const addQuestion = useCallback((q: Omit<Question, "id">) => {
-    setQuestions((prev) => persist([...prev, { ...q, id: crypto.randomUUID() }]));
+    setQuestions((prev) => persist([...prev, { ...q, id: uid() }]));
   }, []);
 
   const updateQuestion = useCallback(

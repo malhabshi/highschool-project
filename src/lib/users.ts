@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { Role } from "@/lib/nav";
+import { uid } from "@/lib/uid";
 
 export type User = {
   id: string;
@@ -83,7 +84,7 @@ export function useUsers() {
   return {
     users,
     addUser: (u: Omit<User, "id">) =>
-      mutate([...getSnapshot(), { ...u, id: crypto.randomUUID() }]),
+      mutate([...getSnapshot(), { ...u, id: uid() }]),
     updateUser: (id: string, patch: Partial<Omit<User, "id">>) =>
       mutate(getSnapshot().map((u) => (u.id === id ? { ...u, ...patch } : u))),
     removeUser: (id: string) =>

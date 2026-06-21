@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { uid } from "@/lib/uid";
 
 export type EventItem = {
   id: string;
@@ -80,7 +81,7 @@ export function useEvents() {
     if (!trimmed || !date) return;
     setEvents((prev) => {
       const next: EventItem[] = [
-        { id: crypto.randomUUID(), title: trimmed, date, createdAt: Date.now() },
+        { id: uid(), title: trimmed, date, createdAt: Date.now() },
         ...prev,
       ];
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { uid } from "@/lib/uid";
 
 // Student records. `assignedTo` is the staff id who manages the student.
 export type Student = {
@@ -76,7 +77,7 @@ export function useStudents() {
         const next: Student[] = [
           ...prev,
           {
-            id: crypto.randomUUID(),
+            id: uid(),
             name: data.name,
             phone: data.phone,
             school: data.school ?? "",
@@ -105,7 +106,7 @@ export function useStudents() {
         const next: Student[] = [
           ...prev,
           ...list.map((d) => ({
-            id: crypto.randomUUID(),
+            id: uid(),
             name: d.name,
             phone: d.phone,
             school: d.school ?? "",
