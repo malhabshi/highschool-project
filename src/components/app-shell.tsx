@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { UserMenu } from "@/components/user-menu";
 import { NotificationBell } from "@/components/notification-bell";
+import { BrandLogo } from "@/components/brand-logo";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -41,8 +42,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             >
               ☰
             </button>
-            <span className="text-lg font-bold tracking-tight text-slate-800 md:hidden">
-              Masar
+            <span className="md:hidden">
+              <BrandLogo
+                imgClassName="max-h-8 w-auto"
+                textClassName="text-lg font-bold tracking-tight text-slate-800"
+              />
             </span>
           </div>
           <div className="flex items-center gap-3">

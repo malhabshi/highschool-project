@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { login, useSession } from "@/lib/auth";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,8 +32,11 @@ export default function LoginPage() {
         onSubmit={submit}
         className="w-full max-w-sm space-y-5 rounded-2xl border border-slate-200 bg-white p-8 shadow-sm"
       >
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-800">Masar</h1>
+        <div className="flex flex-col items-center gap-2 text-center">
+          <BrandLogo
+            imgClassName="max-h-16 w-auto"
+            textClassName="text-2xl font-bold text-slate-800"
+          />
           <p className="text-sm text-slate-500">Sign in to your account</p>
         </div>
 

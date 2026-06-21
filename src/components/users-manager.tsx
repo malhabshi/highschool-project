@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRole } from "@/components/role-context";
 import { useUsers, type User } from "@/lib/users";
+import { LogoSettings } from "@/components/logo-settings";
 import type { Role } from "@/lib/nav";
 
 export function UsersManager() {
@@ -47,7 +48,10 @@ export function UsersManager() {
   }
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div className="space-y-6">
+      <LogoSettings />
+
+      <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
         <h2 className="text-lg font-semibold text-slate-800">Users</h2>
         <button
@@ -130,6 +134,7 @@ export function UsersManager() {
             ))}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );

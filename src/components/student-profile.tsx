@@ -166,6 +166,11 @@ export function StudentProfile({ id }: { id: string }) {
             <p className="text-sm text-slate-500">
               Assigned to {nameOf(users, student.assignedTo)}
             </p>
+            {student.tag && (
+              <span className="mt-1 inline-block rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                {student.tag}
+              </span>
+            )}
           </div>
           {!editing && (
             <button

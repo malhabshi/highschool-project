@@ -281,6 +281,11 @@ export function StudentsTable() {
                   )}
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap gap-1">
+                      {s.tag && (
+                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                          {s.tag}
+                        </span>
+                      )}
                       {isDuplicate && (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                           Duplicated profile
@@ -291,7 +296,7 @@ export function StudentsTable() {
                           Deletion requested
                         </span>
                       )}
-                      {!isDuplicate && !s.deletionRequested && (
+                      {!s.tag && !isDuplicate && !s.deletionRequested && (
                         <span className="text-xs text-slate-400">—</span>
                       )}
                     </div>
@@ -359,6 +364,7 @@ type BulkRow = {
   phone: string;
   school?: string;
   assignedTo: string;
+  tag?: string;
 };
 
 function BulkUploadPanel({
@@ -369,6 +375,7 @@ function BulkUploadPanel({
   onCancel: () => void;
 }) {
   const [result, setResult] = useState("");
+  const [tag, setTag] = useState("");
 
   function downloadTemplate() {
     const content =
@@ -385,6 +392,13 @@ function BulkUploadPanel({
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    const listTag = tag.trim();
+    if (!listTag) {
+      setResult("");
+      alert("Please enter a list name before uploading.");
+      e.target.value = "";
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result ?? "");
@@ -402,12 +416,12 @@ function BulkUploadPanel({
           skipped++;
           continue;
         }
-        // Imported unassigned — admin assigns afterwards.
-        valid.push({ name, phone, school, assignedTo: "" });
+        // Imported unassigned, tagged with the list name.
+        valid.push({ name, phone, school, assignedTo: "", tag: listTag });
       }
       if (valid.length) onImport(valid);
       setResult(
-        `Imported ${valid.length} student(s)` +
+        `Imported ${valid.length} student(s) into list "${listTag}"` +
           (skipped ? `, skipped ${skipped} invalid row(s).` : ".") +
           (valid.length ? " They are unassigned — select them and assign." : "")
       );
@@ -427,6 +441,17 @@ function BulkUploadPanel({
         {" "}— select them in the list and use{" "}
         <span className="font-medium">Assign</span> to give them to an employee.
       </p>
+      <label className="block max-w-xs">
+        <span className="mb-1 block text-sm font-medium text-slate-600">
+          List name <span className="text-red-500">*</span>
+        </span>
+        <input
+          value={tag}
+          onChange={(e) => setTag(e.target.value)}
+          placeholder="e.g. Instagram June, School visit…"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+        />
+      </label>
       <div className="flex flex-wrap items-center gap-3">
         <button
           onClick={downloadTemplate}

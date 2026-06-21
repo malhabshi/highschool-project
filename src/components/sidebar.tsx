@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navItems } from "@/lib/nav";
 import { useRole } from "@/components/role-context";
+import { BrandLogo } from "@/components/brand-logo";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -16,7 +17,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
     <aside className="flex h-full w-64 shrink-0 flex-col bg-slate-900 text-slate-100">
       {/* Brand / logo */}
       <div className="flex h-16 items-center gap-2 border-b border-slate-800 px-6">
-        <span className="text-xl font-bold tracking-tight">Masar</span>
+        <BrandLogo />
       </div>
 
       {/* Menu */}

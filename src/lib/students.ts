@@ -10,6 +10,7 @@ export type Student = {
   school: string;
   assignedTo: string; // user id (see lib/users.ts)
   deletionRequested?: boolean; // employee asked an admin to delete
+  tag?: string; // label for the bulk-upload list this student came from
   notes?: string; // free-text notes from the employee
   // Answers to the configurable questions, keyed by question id.
   // yes/no questions store a boolean; multi questions store a string[].
@@ -92,7 +93,13 @@ export function useStudents() {
   // Add many students at once (bulk CSV upload).
   const addStudentsBulk = useCallback(
     (
-      list: { name: string; phone: string; school?: string; assignedTo: string }[]
+      list: {
+        name: string;
+        phone: string;
+        school?: string;
+        assignedTo: string;
+        tag?: string;
+      }[]
     ) => {
       setStudents((prev) => {
         const next: Student[] = [
@@ -103,6 +110,7 @@ export function useStudents() {
             phone: d.phone,
             school: d.school ?? "",
             assignedTo: d.assignedTo,
+            tag: d.tag,
           })),
         ];
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
