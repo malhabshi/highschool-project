@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { uid } from "@/lib/uid";
+import { supabase } from "@/lib/supabase";
 
 export type QuestionType = "yesno" | "multi";
 
@@ -12,71 +12,66 @@ export type Question = {
   options?: string[]; // used when type === "multi"
 };
 
-// The starting questions (used the first time the app runs).
-export const DEFAULT_QUESTIONS: Question[] = [
-  { id: "answeredCall", label: "Did the student answer our call?", type: "yesno" },
-  { id: "scholarship", label: "Does the student want a scholarship?", type: "yesno" },
-  {
-    id: "countries",
-    label: "Which countries does the student want to apply for?",
-    type: "multi",
-    options: ["UK", "USA", "AZ/NZ"],
-  },
-];
+type Row = {
+  id: string;
+  label: string;
+  type: QuestionType;
+  options: string[] | null;
+};
 
-const STORAGE_KEY = "masar.questions";
+function mapRow(r: Row): Question {
+  return { id: r.id, label: r.label, type: r.type, options: r.options ?? [] };
+}
 
-// Temporary local store. Later this is replaced by Firebase.
+// Cloud-backed: the configurable questions are shared across everyone.
 export function useQuestions() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        setQuestions(JSON.parse(raw));
-      } else {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_QUESTIONS));
-        setQuestions(DEFAULT_QUESTIONS);
-      }
-    } catch {
-      setQuestions(DEFAULT_QUESTIONS);
-    }
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("questions")
+      .select("id, label, type, options, position")
+      .order("position", { ascending: true });
+    setQuestions((data ?? []).map((r) => mapRow(r as Row)));
     setLoaded(true);
   }, []);
 
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        setQuestions(JSON.parse(e.newValue));
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+    refetch();
+  }, [refetch]);
 
-  function persist(next: Question[]) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    return next;
-  }
-
-  const addQuestion = useCallback((q: Omit<Question, "id">) => {
-    setQuestions((prev) => persist([...prev, { ...q, id: uid() }]));
-  }, []);
+  const addQuestion = useCallback(
+    async (q: Omit<Question, "id">) => {
+      await supabase.from("questions").insert({
+        label: q.label,
+        type: q.type,
+        options: q.options ?? [],
+        position: questions.length,
+      });
+      refetch();
+    },
+    [refetch, questions.length]
+  );
 
   const updateQuestion = useCallback(
-    (id: string, patch: Partial<Omit<Question, "id">>) => {
+    async (id: string, patch: Partial<Omit<Question, "id">>) => {
+      // Optimistic local update (keeps typing responsive).
       setQuestions((prev) =>
-        persist(prev.map((q) => (q.id === id ? { ...q, ...patch } : q)))
+        prev.map((q) => (q.id === id ? { ...q, ...patch } : q))
       );
+      await supabase.from("questions").update(patch).eq("id", id);
     },
     []
   );
 
-  const removeQuestion = useCallback((id: string) => {
-    setQuestions((prev) => persist(prev.filter((q) => q.id !== id)));
-  }, []);
+  const removeQuestion = useCallback(
+    async (id: string) => {
+      await supabase.from("questions").delete().eq("id", id);
+      refetch();
+    },
+    [refetch]
+  );
 
   return { questions, addQuestion, updateQuestion, removeQuestion, loaded };
 }

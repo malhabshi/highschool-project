@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { uid } from "@/lib/uid";
+import { supabase } from "@/lib/supabase";
 
 export type Announcement = {
   id: string;
@@ -9,56 +9,47 @@ export type Announcement = {
   createdAt: number;
 };
 
-const STORAGE_KEY = "masar.announcements";
-
-// Temporary local store (browser localStorage). Later this will be replaced
-// by Firebase Firestore so announcements are shared across all real users.
+// Cloud-backed: announcements are shared across all users/devices via Supabase.
 export function useAnnouncements() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  // Load once on mount.
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) setAnnouncements(JSON.parse(raw));
-    } catch {
-      // ignore malformed data
-    }
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("announcements")
+      .select("id, text, created_at")
+      .order("created_at", { ascending: false });
+    setAnnouncements(
+      (data ?? []).map((r) => ({
+        id: r.id as string,
+        text: r.text as string,
+        createdAt: new Date(r.created_at as string).getTime(),
+      }))
+    );
     setLoaded(true);
   }, []);
 
-  // Keep multiple open tabs in sync.
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY) {
-        setAnnouncements(e.newValue ? JSON.parse(e.newValue) : []);
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+    refetch();
+  }, [refetch]);
 
-  const add = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setAnnouncements((prev) => {
-      const next: Announcement[] = [
-        { id: uid(), text: trimmed, createdAt: Date.now() },
-        ...prev,
-      ];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const add = useCallback(
+    async (text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      await supabase.from("announcements").insert({ text: trimmed });
+      refetch();
+    },
+    [refetch]
+  );
 
-  const remove = useCallback((id: string) => {
-    setAnnouncements((prev) => {
-      const next = prev.filter((a) => a.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const remove = useCallback(
+    async (id: string) => {
+      await supabase.from("announcements").delete().eq("id", id);
+      refetch();
+    },
+    [refetch]
+  );
 
   return { announcements, add, remove, loaded };
 }
