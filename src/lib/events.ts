@@ -42,6 +42,17 @@ export function useEvents() {
 
   useEffect(() => {
     refetch();
+    const channel = supabase
+      .channel("events-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "events" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refetch]);
 
   const add = useCallback(

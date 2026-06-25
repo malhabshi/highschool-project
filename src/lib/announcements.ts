@@ -31,6 +31,17 @@ export function useAnnouncements() {
 
   useEffect(() => {
     refetch();
+    const channel = supabase
+      .channel("announcements-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "announcements" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refetch]);
 
   const add = useCallback(
