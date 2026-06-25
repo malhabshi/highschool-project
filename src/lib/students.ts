@@ -15,6 +15,7 @@ export type Student = {
   tag?: string;
   notes?: string;
   answers?: Record<string, boolean | string[]>;
+  pipeline?: string; // "yellow" | "blue"
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -36,6 +37,7 @@ type Row = {
   tag: string | null;
   notes: string | null;
   answers: Record<string, boolean | string[]> | null;
+  pipeline: string | null;
 };
 
 function fromRow(r: Row): Student {
@@ -49,6 +51,7 @@ function fromRow(r: Row): Student {
     tag: r.tag ?? undefined,
     notes: r.notes ?? "",
     answers: r.answers ?? {},
+    pipeline: r.pipeline ?? undefined,
   };
 }
 
@@ -64,6 +67,7 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
   if (patch.tag !== undefined) row.tag = patch.tag ?? null;
   if (patch.notes !== undefined) row.notes = patch.notes;
   if (patch.answers !== undefined) row.answers = patch.answers;
+  if (patch.pipeline !== undefined) row.pipeline = patch.pipeline ?? null;
   return row;
 }
 
@@ -102,6 +106,7 @@ export function useStudents() {
       phone: string;
       school?: string;
       assignedTo: string;
+      pipeline?: string;
     }) => {
       const { data: rows } = await supabase
         .from("students")
@@ -110,6 +115,7 @@ export function useStudents() {
           phone: data.phone,
           school: data.school ?? "",
           assigned_to: data.assignedTo || null,
+          pipeline: data.pipeline ?? null,
         })
         .select();
       // Optimistically show it right away (realtime will reconcile).

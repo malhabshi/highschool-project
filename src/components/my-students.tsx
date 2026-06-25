@@ -38,6 +38,8 @@ export function MyStudents() {
         />
       )}
 
+      {/* pipeline color is shown as a left bar on each row below */}
+
       {!loaded ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">Loading…</p>
       ) : mine.length === 0 ? (
@@ -61,12 +63,24 @@ export function MyStudents() {
                   className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
                 >
                   <td className="px-5 py-3">
-                    <Link
-                      href={`/student/${s.id}`}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      {s.name}
-                    </Link>
+                    <span className="flex items-center gap-2">
+                      <span
+                        title={s.pipeline ? `${s.pipeline} pipeline` : "no pipeline"}
+                        className={`inline-block h-3 w-3 shrink-0 rounded-full ${
+                          s.pipeline === "yellow"
+                            ? "bg-yellow-400"
+                            : s.pipeline === "blue"
+                              ? "bg-blue-500"
+                              : "bg-slate-200"
+                        }`}
+                      />
+                      <Link
+                        href={`/student/${s.id}`}
+                        className="font-medium text-blue-600 hover:underline"
+                      >
+                        {s.name}
+                      </Link>
+                    </span>
                   </td>
                   <td className="px-5 py-3 text-slate-600">{s.phone}</td>
                   <td className="px-5 py-3 text-slate-600">{s.school || "—"}</td>
@@ -84,12 +98,18 @@ function AddMyStudentForm({
   onAdd,
   onCancel,
 }: {
-  onAdd: (data: { name: string; phone: string; school: string }) => Promise<void>;
+  onAdd: (data: {
+    name: string;
+    phone: string;
+    school: string;
+    pipeline: string;
+  }) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
+  const [pipeline, setPipeline] = useState("yellow");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -98,7 +118,7 @@ function AddMyStudentForm({
     if (!/^\d{8}$/.test(phone)) return setError("Phone must be exactly 8 digits.");
     setBusy(true);
     try {
-      await onAdd({ name: name.trim(), phone, school: school.trim() });
+      await onAdd({ name: name.trim(), phone, school: school.trim(), pipeline });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -144,6 +164,33 @@ function AddMyStudentForm({
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
           />
         </label>
+      </div>
+
+      {/* Pipeline color */}
+      <div>
+        <span className="mb-1 block text-sm font-medium text-slate-600">
+          Pipeline
+        </span>
+        <div className="flex gap-2">
+          {[
+            { v: "yellow", label: "Yellow", dot: "bg-yellow-400" },
+            { v: "blue", label: "Blue", dot: "bg-blue-500" },
+          ].map((opt) => (
+            <button
+              key={opt.v}
+              type="button"
+              onClick={() => setPipeline(opt.v)}
+              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                pipeline === opt.v
+                  ? "border-blue-500 bg-blue-50 text-slate-800"
+                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <span className={`h-3 w-3 rounded-full ${opt.dot}`} />
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
