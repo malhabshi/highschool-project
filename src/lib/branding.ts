@@ -18,6 +18,17 @@ export function useLogo() {
 
   useEffect(() => {
     refetch();
+    const channel = supabase
+      .channel("settings-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "settings" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refetch]);
 
   const setLogo = useCallback(async (value: string) => {

@@ -39,6 +39,23 @@ export function useQuestions() {
 
   useEffect(() => {
     refetch();
+    // Listen only for added/removed questions (not letter-by-letter edits).
+    const channel = supabase
+      .channel("questions-changes")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "questions" },
+        () => refetch()
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "questions" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refetch]);
 
   const addQuestion = useCallback(

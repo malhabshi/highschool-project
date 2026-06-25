@@ -39,6 +39,17 @@ export function useUsers() {
 
   useEffect(() => {
     refetch();
+    const channel = supabase
+      .channel("profiles-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "profiles" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refetch]);
 
   // Create a real login account via the secure admin endpoint (auto-confirmed).
