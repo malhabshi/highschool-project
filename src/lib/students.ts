@@ -103,12 +103,17 @@ export function useStudents() {
       school?: string;
       assignedTo: string;
     }) => {
-      await supabase.from("students").insert({
-        name: data.name,
-        phone: data.phone,
-        school: data.school ?? "",
-        assigned_to: data.assignedTo || null,
-      });
+      const { data: rows } = await supabase
+        .from("students")
+        .insert({
+          name: data.name,
+          phone: data.phone,
+          school: data.school ?? "",
+          assigned_to: data.assignedTo || null,
+        })
+        .select();
+      // Optimistically show it right away (realtime will reconcile).
+      if (rows?.[0]) setStudents((prev) => [...prev, fromRow(rows[0] as Row)]);
     },
     []
   );
