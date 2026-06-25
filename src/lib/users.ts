@@ -1,8 +1,9 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { createClient } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import type { Role } from "@/lib/nav";
-import { uid } from "@/lib/uid";
 
 export type User = {
   id: string;
@@ -10,84 +11,111 @@ export type User = {
   phone: string;
   email: string;
   role: Role;
-  password: string;
 };
-
-export const DEFAULT_USERS: User[] = [
-  { id: "admin", name: "Admin", phone: "90000000", email: "admin@masar.com", role: "admin", password: "admin123" },
-  { id: "sara", name: "Sara", phone: "90001001", email: "sara@masar.com", role: "employee", password: "sara123" },
-  { id: "ahmed", name: "Ahmed", phone: "90001002", email: "ahmed@masar.com", role: "employee", password: "ahmed123" },
-  { id: "mariam", name: "Mariam", phone: "90001003", email: "mariam@masar.com", role: "employee", password: "mariam123" },
-];
-
-const STORAGE_KEY = "masar.users";
-
-// Small external store so every component (shell, switcher, pages) stays in
-// sync live. Later this is replaced by Firebase Auth + Firestore.
-let state: User[] | null = null;
-const listeners = new Set<() => void>();
-
-function read(): User[] {
-  if (typeof window === "undefined") return DEFAULT_USERS;
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-  return DEFAULT_USERS;
-}
-
-function getSnapshot(): User[] {
-  if (state === null) {
-    state = read();
-    if (typeof window !== "undefined") {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-  }
-  return state;
-}
-
-function subscribe(cb: () => void) {
-  listeners.add(cb);
-  return () => {
-    listeners.delete(cb);
-  };
-}
-
-function mutate(next: User[]) {
-  state = next;
-  if (typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  }
-  listeners.forEach((l) => l());
-}
 
 export function nameOf(users: User[], id: string) {
   return users.find((u) => u.id === id)?.name ?? "Unassigned";
 }
 
-// Check email + password against the stored accounts.
-export function authenticate(email: string, password: string): User | null {
-  const list = getSnapshot();
-  const match = list.find(
-    (u) =>
-      u.email.trim().toLowerCase() === email.trim().toLowerCase() &&
-      u.password === password
-  );
-  return match ?? null;
+async function authHeader() {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return { Authorization: `Bearer ${session?.access_token ?? ""}` };
 }
 
+// Cloud-backed: staff accounts live in Supabase (Auth + the profiles table).
 export function useUsers() {
-  const users = useSyncExternalStore(subscribe, getSnapshot, () => DEFAULT_USERS);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
-  return {
-    users,
-    addUser: (u: Omit<User, "id">) =>
-      mutate([...getSnapshot(), { ...u, id: uid() }]),
-    updateUser: (id: string, patch: Partial<Omit<User, "id">>) =>
-      mutate(getSnapshot().map((u) => (u.id === id ? { ...u, ...patch } : u))),
-    removeUser: (id: string) =>
-      mutate(getSnapshot().filter((u) => u.id !== id)),
-  };
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, name, phone, email, role")
+      .order("name", { ascending: true });
+    setUsers((data ?? []) as User[]);
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    refetch();
+  }, [refetch]);
+
+  // Create a real login account. Uses a throwaway client for sign-up so the
+  // admin's own session is not replaced.
+  const addUser = useCallback(
+    async (data: {
+      name: string;
+      phone: string;
+      email: string;
+      role: Role;
+      password: string;
+    }) => {
+      const tmp = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        { auth: { persistSession: false, autoRefreshToken: false } }
+      );
+      const { data: signUp, error } = await tmp.auth.signUp({
+        email: data.email.trim(),
+        password: data.password,
+        options: { data: { name: data.name } },
+      });
+      if (error) throw new Error(error.message);
+      const newId = signUp.user?.id;
+      if (newId) {
+        await supabase
+          .from("profiles")
+          .update({
+            name: data.name,
+            phone: data.phone,
+            email: data.email.trim(),
+            role: data.role,
+          })
+          .eq("id", newId);
+      }
+      await tmp.auth.signOut();
+      await refetch();
+    },
+    [refetch]
+  );
+
+  const updateUser = useCallback(
+    async (id: string, patch: Partial<Omit<User, "id">>) => {
+      await supabase.from("profiles").update(patch).eq("id", id);
+      await refetch();
+    },
+    [refetch]
+  );
+
+  const removeUser = useCallback(
+    async (id: string) => {
+      const res = await fetch("/api/admin/users", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify({ id }),
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "Failed to delete user");
+      }
+      await refetch();
+    },
+    [refetch]
+  );
+
+  const resetPassword = useCallback(async (id: string, password: string) => {
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ id, password }),
+    });
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.error || "Failed to reset password");
+    }
+  }, []);
+
+  return { users, addUser, updateUser, removeUser, resetPassword, loaded };
 }

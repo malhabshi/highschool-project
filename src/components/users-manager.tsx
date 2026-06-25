@@ -8,9 +8,10 @@ import type { Role } from "@/lib/nav";
 
 export function UsersManager() {
   const { role } = useRole();
-  const { users, addUser, updateUser, removeUser } = useUsers();
+  const { users, addUser, updateUser, removeUser, resetPassword } = useUsers();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const [busy, setBusy] = useState(false);
 
   // Only admins manage users.
   if (role !== "admin") {
@@ -30,21 +31,29 @@ export function UsersManager() {
     setShowForm(true);
   }
 
-  function resetPassword(u: User) {
-    const pw = prompt(`Set a new password for ${u.name}:`);
-    if (pw && pw.trim()) {
-      updateUser(u.id, { password: pw.trim() });
+  async function doResetPassword(u: User) {
+    const pw = prompt(`Set a new password for ${u.name} (min 6 chars):`);
+    if (!pw || !pw.trim()) return;
+    try {
+      await resetPassword(u.id, pw.trim());
       alert(`Password updated for ${u.name}.`);
+    } catch (e) {
+      alert(`Could not reset password: ${(e as Error).message}`);
     }
   }
 
-  function deleteUser(u: User) {
+  async function deleteUser(u: User) {
     const admins = users.filter((x) => x.role === "admin");
     if (u.role === "admin" && admins.length <= 1) {
       alert("You can't delete the only admin.");
       return;
     }
-    if (confirm(`Delete user ${u.name}?`)) removeUser(u.id);
+    if (!confirm(`Delete user ${u.name}?`)) return;
+    try {
+      await removeUser(u.id);
+    } catch (e) {
+      alert(`Could not delete user: ${(e as Error).message}`);
+    }
   }
 
   return (
@@ -66,11 +75,27 @@ export function UsersManager() {
         <UserForm
           key={editing?.id ?? "new"}
           initial={editing}
+          busy={busy}
           onCancel={() => setShowForm(false)}
-          onSubmit={(data) => {
-            if (editing) updateUser(editing.id, data);
-            else addUser(data);
-            setShowForm(false);
+          onSubmit={async (data) => {
+            setBusy(true);
+            try {
+              if (editing) {
+                await updateUser(editing.id, {
+                  name: data.name,
+                  phone: data.phone,
+                  email: data.email,
+                  role: data.role,
+                });
+              } else {
+                await addUser(data);
+              }
+              setShowForm(false);
+            } catch (e) {
+              alert(`Could not save user: ${(e as Error).message}`);
+            } finally {
+              setBusy(false);
+            }
           }}
         />
       )}
@@ -117,7 +142,7 @@ export function UsersManager() {
                       Edit
                     </button>
                     <button
-                      onClick={() => resetPassword(u)}
+                      onClick={() => doResetPassword(u)}
                       className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100"
                     >
                       Reset password
@@ -140,27 +165,39 @@ export function UsersManager() {
   );
 }
 
+type UserFormData = {
+  name: string;
+  phone: string;
+  email: string;
+  role: Role;
+  password: string;
+};
+
 function UserForm({
   initial,
+  busy,
   onSubmit,
   onCancel,
 }: {
   initial: User | null;
-  onSubmit: (data: Omit<User, "id">) => void;
+  busy: boolean;
+  onSubmit: (data: UserFormData) => void;
   onCancel: () => void;
 }) {
+  const isEdit = !!initial;
   const [name, setName] = useState(initial?.name ?? "");
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [roleVal, setRoleVal] = useState<Role>(initial?.role ?? "employee");
-  const [password, setPassword] = useState(initial?.password ?? "");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   function submit() {
     if (!name.trim()) return setError("Name is required.");
     if (!/^\d{8}$/.test(phone)) return setError("Phone must be exactly 8 digits.");
     if (!email.includes("@")) return setError("Enter a valid email address.");
-    if (!password.trim()) return setError("Password is required.");
+    if (!isEdit && password.trim().length < 6)
+      return setError("Password must be at least 6 characters.");
     onSubmit({
       name: name.trim(),
       phone,
@@ -198,8 +235,9 @@ function UserForm({
           <input
             type="email"
             value={email}
+            disabled={isEdit}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 disabled:bg-slate-100 disabled:text-slate-500"
           />
         </Field>
         <Field label="Type of user">
@@ -212,15 +250,23 @@ function UserForm({
             <option value="admin">Admin</option>
           </select>
         </Field>
-        <Field label="Password">
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-          />
-        </Field>
+        {!isEdit && (
+          <Field label="Password (min 6 chars)">
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            />
+          </Field>
+        )}
       </div>
 
+      {isEdit && (
+        <p className="text-xs text-slate-500">
+          To change the login email or password, use “Reset password”. Email
+          can&apos;t be edited here.
+        </p>
+      )}
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex justify-end gap-2">
@@ -232,9 +278,10 @@ function UserForm({
         </button>
         <button
           onClick={submit}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          disabled={busy}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:bg-slate-300"
         >
-          {initial ? "Save changes" : "Add user"}
+          {busy ? "Saving…" : initial ? "Save changes" : "Add user"}
         </button>
       </div>
     </div>
