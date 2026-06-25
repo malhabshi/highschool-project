@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { uid } from "@/lib/uid";
 
 export type QuestionType = "yesno" | "multi";
 
@@ -49,7 +50,7 @@ export function useQuestions() {
     refetch();
     // Listen only for added/removed questions (not letter-by-letter edits).
     const channel = supabase
-      .channel("questions-changes")
+      .channel(`questions-${uid()}`)
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "questions" },

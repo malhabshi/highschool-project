@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { uid } from "@/lib/uid";
 
 export type Announcement = {
   id: string;
@@ -32,7 +33,7 @@ export function useAnnouncements() {
   useEffect(() => {
     refetch();
     const channel = supabase
-      .channel("announcements-changes")
+      .channel(`announcements-${uid()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "announcements" },

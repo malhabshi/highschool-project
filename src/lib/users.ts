@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { uid } from "@/lib/uid";
 import type { Role } from "@/lib/nav";
 
 export type User = {
@@ -40,7 +41,7 @@ export function useUsers() {
   useEffect(() => {
     refetch();
     const channel = supabase
-      .channel("profiles-changes")
+      .channel(`profiles-${uid()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "profiles" },

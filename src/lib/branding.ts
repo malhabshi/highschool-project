@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { uid } from "@/lib/uid";
 
 // Cloud-backed: one global logo (in the settings row id=1) shared by everyone.
 export function useLogo() {
@@ -19,7 +20,7 @@ export function useLogo() {
   useEffect(() => {
     refetch();
     const channel = supabase
-      .channel("settings-changes")
+      .channel(`settings-${uid()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "settings" },

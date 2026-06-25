@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { uid } from "@/lib/uid";
 
 // Student records. `assignedTo` is the user id (profile) who manages them.
 export type Student = {
@@ -83,7 +84,7 @@ export function useStudents() {
   useEffect(() => {
     refetch();
     const channel = supabase
-      .channel("students-changes")
+      .channel(`students-${uid()}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "students" },
