@@ -17,8 +17,8 @@ export function UserMenu() {
         </p>
       </div>
       <button
-        onClick={() => {
-          logout();
+        onClick={async () => {
+          await logout();
           router.replace("/login");
         }}
         className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"

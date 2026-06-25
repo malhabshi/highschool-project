@@ -12,17 +12,23 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
+  const [busy, setBusy] = useState(false);
+
   // Already logged in → go to the app.
   useEffect(() => {
     if (userId) router.replace("/dashboard");
   }, [userId, router]);
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (login(email, password)) {
-      router.replace("/dashboard");
-    } else {
+    setError("");
+    setBusy(true);
+    const err = await login(email, password);
+    setBusy(false);
+    if (err) {
       setError("Wrong email or password.");
+    } else {
+      router.replace("/dashboard");
     }
   }
 
@@ -70,9 +76,10 @@ export default function LoginPage() {
 
         <button
           type="submit"
-          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          disabled={busy}
+          className="w-full rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:bg-slate-300"
         >
-          Sign in
+          {busy ? "Signing in…" : "Sign in"}
         </button>
       </form>
     </div>
