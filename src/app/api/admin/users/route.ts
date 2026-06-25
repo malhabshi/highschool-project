@@ -32,6 +32,34 @@ async function requireAdmin(req: Request) {
   return admin;
 }
 
+// Create a new staff account (auto-confirmed) + fill in their profile.
+export async function POST(req: Request) {
+  const admin = await requireAdmin(req);
+  if (!admin)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { email, password, name, phone, role } = await req.json();
+  if (!email || !password || String(password).length < 6)
+    return NextResponse.json(
+      { error: "Email and a 6+ char password are required." },
+      { status: 400 }
+    );
+  const { data, error } = await admin.auth.admin.createUser({
+    email: String(email).trim(),
+    password,
+    email_confirm: true,
+    user_metadata: { name },
+  });
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  if (data.user) {
+    await admin
+      .from("profiles")
+      .update({ name, phone, email: String(email).trim(), role })
+      .eq("id", data.user.id);
+  }
+  return NextResponse.json({ ok: true });
+}
+
 // Reset a user's password.
 export async function PATCH(req: Request) {
   const admin = await requireAdmin(req);

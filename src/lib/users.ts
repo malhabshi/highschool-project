@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import type { Role } from "@/lib/nav";
 
@@ -42,8 +41,7 @@ export function useUsers() {
     refetch();
   }, [refetch]);
 
-  // Create a real login account. Uses a throwaway client for sign-up so the
-  // admin's own session is not replaced.
+  // Create a real login account via the secure admin endpoint (auto-confirmed).
   const addUser = useCallback(
     async (data: {
       name: string;
@@ -52,30 +50,15 @@ export function useUsers() {
       role: Role;
       password: string;
     }) => {
-      const tmp = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        { auth: { persistSession: false, autoRefreshToken: false } }
-      );
-      const { data: signUp, error } = await tmp.auth.signUp({
-        email: data.email.trim(),
-        password: data.password,
-        options: { data: { name: data.name } },
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(await authHeader()) },
+        body: JSON.stringify(data),
       });
-      if (error) throw new Error(error.message);
-      const newId = signUp.user?.id;
-      if (newId) {
-        await supabase
-          .from("profiles")
-          .update({
-            name: data.name,
-            phone: data.phone,
-            email: data.email.trim(),
-            role: data.role,
-          })
-          .eq("id", newId);
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || "Failed to create user");
       }
-      await tmp.auth.signOut();
       await refetch();
     },
     [refetch]
