@@ -1,20 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { uid } from "@/lib/uid";
+import { supabase } from "@/lib/supabase";
 
-// Student records. `assignedTo` is the staff id who manages the student.
+// Student records. `assignedTo` is the user id (profile) who manages them.
 export type Student = {
   id: string;
   name: string;
   phone: string;
   school: string;
-  assignedTo: string; // user id (see lib/users.ts)
-  deletionRequested?: boolean; // employee asked an admin to delete
-  tag?: string; // label for the bulk-upload list this student came from
-  notes?: string; // free-text notes from the employee
-  // Answers to the configurable questions, keyed by question id.
-  // yes/no questions store a boolean; multi questions store a string[].
+  assignedTo: string; // profile id, or "" when unassigned
+  deletionRequested?: boolean;
+  tag?: string;
+  notes?: string;
   answers?: Record<string, boolean | string[]>;
 };
 
@@ -27,73 +25,95 @@ export function duplicatesOf(students: Student[], student: Student) {
   );
 }
 
-// Seed data used the first time the app runs (before Firebase exists).
-export const SAMPLE_STUDENTS: Student[] = [
-  { id: "1", name: "Fatima Al-Salem", phone: "90001111", school: "Kuwait English School", assignedTo: "sara" },
-  { id: "2", name: "Yousef Al-Ali", phone: "90002222", school: "Al-Bayan Bilingual School", assignedTo: "ahmed" },
-  { id: "3", name: "Noor Hassan", phone: "90003333", school: "American School of Kuwait", assignedTo: "sara" },
-  { id: "4", name: "Omar Khalid", phone: "90004444", school: "Gulf English School", assignedTo: "mariam" },
-  { id: "5", name: "Layla Ahmad", phone: "90005555", school: "The English Academy", assignedTo: "ahmed" },
-];
+type Row = {
+  id: string;
+  name: string;
+  phone: string;
+  school: string;
+  assigned_to: string | null;
+  deletion_requested: boolean;
+  tag: string | null;
+  notes: string | null;
+  answers: Record<string, boolean | string[]> | null;
+};
 
-const STORAGE_KEY = "masar.students";
+function fromRow(r: Row): Student {
+  return {
+    id: r.id,
+    name: r.name,
+    phone: r.phone,
+    school: r.school,
+    assignedTo: r.assigned_to ?? "",
+    deletionRequested: r.deletion_requested,
+    tag: r.tag ?? undefined,
+    notes: r.notes ?? "",
+    answers: r.answers ?? {},
+  };
+}
 
-// Temporary local store. Later this is replaced by Firebase Firestore.
+// Map a camelCase patch to the snake_case DB columns.
+function toRow(patch: Partial<Omit<Student, "id">>) {
+  const row: Record<string, unknown> = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.phone !== undefined) row.phone = patch.phone;
+  if (patch.school !== undefined) row.school = patch.school;
+  if (patch.assignedTo !== undefined) row.assigned_to = patch.assignedTo || null;
+  if (patch.deletionRequested !== undefined)
+    row.deletion_requested = patch.deletionRequested;
+  if (patch.tag !== undefined) row.tag = patch.tag ?? null;
+  if (patch.notes !== undefined) row.notes = patch.notes;
+  if (patch.answers !== undefined) row.answers = patch.answers;
+  return row;
+}
+
+// Cloud-backed: students are shared across the whole team, with live updates.
 export function useStudents() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        setStudents(JSON.parse(raw));
-      } else {
-        // First run: seed with sample data.
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(SAMPLE_STUDENTS));
-        setStudents(SAMPLE_STUDENTS);
-      }
-    } catch {
-      setStudents(SAMPLE_STUDENTS);
-    }
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("students")
+      .select("*")
+      .order("created_at", { ascending: true });
+    setStudents((data ?? []).map((r) => fromRow(r as Row)));
     setLoaded(true);
   }, []);
 
-  // Keep multiple open tabs in sync.
   useEffect(() => {
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        setStudents(JSON.parse(e.newValue));
-      }
+    refetch();
+    const channel = supabase
+      .channel("students-changes")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "students" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
     };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  }, [refetch]);
 
-  // Create a new student (admin only — enforced in the UI).
   const addStudent = useCallback(
-    (data: { name: string; phone: string; school?: string; assignedTo: string }) => {
-      setStudents((prev) => {
-        const next: Student[] = [
-          ...prev,
-          {
-            id: uid(),
-            name: data.name,
-            phone: data.phone,
-            school: data.school ?? "",
-            assignedTo: data.assignedTo,
-          },
-        ];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        return next;
+    async (data: {
+      name: string;
+      phone: string;
+      school?: string;
+      assignedTo: string;
+    }) => {
+      await supabase.from("students").insert({
+        name: data.name,
+        phone: data.phone,
+        school: data.school ?? "",
+        assigned_to: data.assignedTo || null,
       });
     },
     []
   );
 
-  // Add many students at once (bulk CSV upload).
   const addStudentsBulk = useCallback(
-    (
+    async (
       list: {
         name: string;
         phone: string;
@@ -102,73 +122,53 @@ export function useStudents() {
         tag?: string;
       }[]
     ) => {
-      setStudents((prev) => {
-        const next: Student[] = [
-          ...prev,
-          ...list.map((d) => ({
-            id: uid(),
-            name: d.name,
-            phone: d.phone,
-            school: d.school ?? "",
-            assignedTo: d.assignedTo,
-            tag: d.tag,
-          })),
-        ];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        return next;
-      });
+      await supabase.from("students").insert(
+        list.map((d) => ({
+          name: d.name,
+          phone: d.phone,
+          school: d.school ?? "",
+          assigned_to: d.assignedTo || null,
+          tag: d.tag ?? null,
+        }))
+      );
     },
     []
   );
 
-  const update = useCallback((id: string, patch: Partial<Omit<Student, "id">>) => {
-    setStudents((prev) => {
-      const next = prev.map((s) => (s.id === id ? { ...s, ...patch } : s));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  // Employee asks for a profile to be deleted (admin must approve).
-  const requestDeletion = useCallback((id: string) => {
-    setStudents((prev) => {
-      const next = prev.map((s) =>
-        s.id === id ? { ...s, deletionRequested: true } : s
+  const update = useCallback(
+    async (id: string, patch: Partial<Omit<Student, "id">>) => {
+      // Optimistic local update for snappy UI; realtime keeps others in sync.
+      setStudents((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, ...patch } : s))
       );
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+      await supabase.from("students").update(toRow(patch)).eq("id", id);
+    },
+    []
+  );
+
+  const requestDeletion = useCallback(async (id: string) => {
+    setStudents((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, deletionRequested: true } : s))
+    );
+    await supabase
+      .from("students")
+      .update({ deletion_requested: true })
+      .eq("id", id);
   }, []);
 
-  // Permanently remove a student (admin only — enforced in the UI).
-  const remove = useCallback((id: string) => {
-    setStudents((prev) => {
-      const next = prev.filter((s) => s.id !== id);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const remove = useCallback(async (id: string) => {
+    await supabase.from("students").delete().eq("id", id);
   }, []);
 
-  // Remove several students at once (admin bulk delete).
-  const removeMany = useCallback((ids: string[]) => {
-    const idSet = new Set(ids);
-    setStudents((prev) => {
-      const next = prev.filter((s) => !idSet.has(s.id));
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const removeMany = useCallback(async (ids: string[]) => {
+    await supabase.from("students").delete().in("id", ids);
   }, []);
 
-  // Reassign several students to one staff member at once (admin bulk assign).
-  const assignMany = useCallback((ids: string[], staffId: string) => {
-    const idSet = new Set(ids);
-    setStudents((prev) => {
-      const next = prev.map((s) =>
-        idSet.has(s.id) ? { ...s, assignedTo: staffId } : s
-      );
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
-    });
+  const assignMany = useCallback(async (ids: string[], staffId: string) => {
+    await supabase
+      .from("students")
+      .update({ assigned_to: staffId })
+      .in("id", ids);
   }, []);
 
   return {

@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/components/role-context";
 import { useStudents, duplicatesOf } from "@/lib/students";
 import {
   useQuestions,
+  scholarshipQuestionId,
   type Question,
   type QuestionType,
 } from "@/lib/questions";
@@ -27,6 +28,12 @@ export function StudentProfile({ id }: { id: string }) {
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
   const [error, setError] = useState("");
+
+  // Notes is edited locally and saved on blur (so live updates don't interrupt typing).
+  const [noteDraft, setNoteDraft] = useState("");
+  useEffect(() => {
+    setNoteDraft(student?.notes ?? "");
+  }, [student?.id, student?.notes]);
 
   const backLink = (
     <Link href="/students" className="text-sm text-blue-600 hover:underline">
@@ -156,11 +163,13 @@ export function StudentProfile({ id }: { id: string }) {
           <div>
             <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
               {student.name}
-              {student.answers?.scholarship === true && (
-                <span title="Wants a scholarship" className="text-green-600">
-                  ✓
-                </span>
-              )}
+              {scholarshipQuestionId(questions) &&
+                student.answers?.[scholarshipQuestionId(questions)!] ===
+                  true && (
+                  <span title="Wants a scholarship" className="text-green-600">
+                    ✓
+                  </span>
+                )}
             </h1>
             <p className="text-sm text-slate-600">{student.phone}</p>
             <p className="text-sm text-slate-500">
@@ -320,8 +329,13 @@ export function StudentProfile({ id }: { id: string }) {
           Write anything about this student. Saved automatically.
         </p>
         <textarea
-          value={student.notes ?? ""}
-          onChange={(e) => update(student.id, { notes: e.target.value })}
+          value={noteDraft}
+          onChange={(e) => setNoteDraft(e.target.value)}
+          onBlur={() => {
+            if (noteDraft !== (student.notes ?? "")) {
+              update(student.id, { notes: noteDraft });
+            }
+          }}
           rows={5}
           placeholder="Type your notes here..."
           className="w-full resize-y rounded-lg border border-slate-300 p-3 text-sm text-slate-800 outline-none focus:border-blue-500"

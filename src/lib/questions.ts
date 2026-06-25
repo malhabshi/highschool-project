@@ -12,6 +12,14 @@ export type Question = {
   options?: string[]; // used when type === "multi"
 };
 
+// The yes/no "scholarship" question (matched by name), used by the green ✓ flag.
+export function scholarshipQuestionId(questions: Question[]): string | null {
+  const q = questions.find(
+    (q) => q.type === "yesno" && q.label.toLowerCase().includes("scholarship")
+  );
+  return q?.id ?? null;
+}
+
 type Row = {
   id: string;
   label: string;

@@ -3,15 +3,20 @@
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useStudents } from "@/lib/students";
+import { useQuestions, scholarshipQuestionId } from "@/lib/questions";
 
 // Notifies the admin how many students want a scholarship.
 export function NotificationBell() {
   const { role } = useRole();
   const { students } = useStudents();
+  const { questions } = useQuestions();
 
   if (role !== "admin") return null;
 
-  const count = students.filter((s) => s.answers?.scholarship === true).length;
+  const sid = scholarshipQuestionId(questions);
+  const count = sid
+    ? students.filter((s) => s.answers?.[sid] === true).length
+    : 0;
 
   return (
     <Link

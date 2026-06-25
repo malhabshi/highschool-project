@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useStudents, duplicatesOf } from "@/lib/students";
-import { useQuestions } from "@/lib/questions";
+import { useQuestions, scholarshipQuestionId } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
 
 export function StudentsTable() {
@@ -22,6 +22,7 @@ export function StudentsTable() {
   const isAdmin = role === "admin";
 
   const { questions } = useQuestions();
+  const sid = scholarshipQuestionId(questions);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
   const [adding, setAdding] = useState(false);
@@ -256,7 +257,7 @@ export function StudentsTable() {
                       >
                         {s.name}
                       </Link>
-                      {s.answers?.scholarship === true && (
+                      {sid && s.answers?.[sid] === true && (
                         <span
                           title="Wants a scholarship"
                           className="text-green-600"
