@@ -221,9 +221,10 @@ export function useStudents() {
   }, []);
 
   const assignMany = useCallback(async (ids: string[], staffId: string) => {
+    // Empty target = unassign (null).
     await supabase
       .from("students")
-      .update({ assigned_to: staffId })
+      .update({ assigned_to: staffId || null })
       .in("id", ids);
   }, []);
 

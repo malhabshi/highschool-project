@@ -63,6 +63,9 @@ export function StudentsTable() {
   // Filter by list name ("any" | a list/tag name).
   const [listFilter, setListFilter] = useState("any");
 
+  // Free-text search by name or phone number.
+  const [search, setSearch] = useState("");
+
   // Pagination.
   const PAGE_SIZE = 50;
   const [page, setPage] = useState(1);
@@ -72,10 +75,10 @@ export function StudentsTable() {
   const setFilter = (id: string, v: string) =>
     setFilters((prev) => ({ ...prev, [id]: v }));
 
-  // Back to page 1 whenever a filter changes.
+  // Back to page 1 whenever a filter or the search changes.
   useEffect(() => {
     setPage(1);
-  }, [assignFilter, schoolFilter, genderFilter, listFilter, filters]);
+  }, [assignFilter, schoolFilter, genderFilter, listFilter, search, filters]);
 
   // Keep this page separate from the My Students page: hide students that were
   // created over there.
@@ -96,8 +99,17 @@ export function StudentsTable() {
     new Set(roleList.map((s) => s.tag).filter(Boolean))
   ).sort() as string[];
 
-  // Apply the assignment + school + question filters.
+  // Search terms (name match is case-insensitive; phone match is digits-only).
+  const term = search.trim().toLowerCase();
+  const phoneQuery = search.replace(/\D/g, "");
+
+  // Apply the search + assignment + school + question filters.
   const students = roleList.filter((s) => {
+    if (term) {
+      const nameMatch = s.name.toLowerCase().includes(term);
+      const phoneMatch = phoneQuery.length > 0 && s.phone.includes(phoneQuery);
+      if (!nameMatch && !phoneMatch) return false;
+    }
     if (isAdmin && assignFilter !== "any") {
       if (assignFilter === "unassigned") {
         if (s.assignedTo) return false;
@@ -174,6 +186,15 @@ export function StudentsTable() {
     setAssignTarget("");
   }
 
+  function unassignSelected() {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (confirm(`Unassign ${ids.length} selected profile(s)?`)) {
+      assignMany(ids, ""); // empty target = unassign
+      setSelected(new Set());
+    }
+  }
+
   const allSelected =
     students.length > 0 && selected.size === students.length;
 
@@ -203,6 +224,12 @@ export function StudentsTable() {
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Assign ({selected.size})
+            </button>
+            <button
+              onClick={unassignSelected}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              Unassign ({selected.size})
             </button>
             <button
               onClick={deleteSelected}
@@ -258,6 +285,12 @@ export function StudentsTable() {
 
       {/* Filters (assigned employee + school + the configurable questions) */}
       <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 px-5 py-3">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Search name or phone…"
+            className="min-w-[14rem] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+          />
           <span className="text-xs font-medium uppercase text-slate-400">
             Filters
           </span>
