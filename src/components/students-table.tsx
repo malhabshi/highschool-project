@@ -268,7 +268,16 @@ export function StudentsTable() {
           </thead>
           <tbody>
             {ordered.map((s) => {
-              const isDuplicate = duplicatesOf(all, s).length > 0;
+              const dups = duplicatesOf(all, s);
+              const isDuplicate = dups.length > 0;
+              const dupDetail = dups
+                .map(
+                  (d) =>
+                    `${nameOf(users, d.assignedTo)} (${
+                      d.source === "my-students" ? "employee" : "admin"
+                    })`
+                )
+                .join(", ");
               return (
                 <tr
                   key={s.id}
@@ -330,6 +339,11 @@ export function StudentsTable() {
                       {isDuplicate && (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                           Duplicated profile
+                        </span>
+                      )}
+                      {isAdmin && isDuplicate && (
+                        <span className="basis-full text-[11px] text-amber-700">
+                          Also held by {dupDetail}
                         </span>
                       )}
                       {s.deletionRequested && (
