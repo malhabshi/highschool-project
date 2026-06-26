@@ -18,9 +18,9 @@ function fmtKuwait(iso: string) {
   });
 }
 
-// Oldest first, newest last.
-function byOldest(a: Student, b: Student) {
-  return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+// Newest first, oldest last.
+function byNewest(a: Student, b: Student) {
+  return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
 }
 
 // Shows the students assigned to the logged-in user, split into 3 pipeline
@@ -39,14 +39,14 @@ export function MyStudents() {
 
   const none = mine
     .filter((s) => s.pipeline !== "yellow" && s.pipeline !== "blue")
-    .sort(byOldest);
-  const yellow = mine.filter((s) => s.pipeline === "yellow").sort(byOldest);
+    .sort(byNewest);
+  const yellow = mine.filter((s) => s.pipeline === "yellow").sort(byNewest);
 
   // Dark blue: an employee sees their own; the admin sees everyone's, so they
   // can review what each user moved into the dark-blue stage.
   const blue = (isAdmin ? onPage : mine)
     .filter((s) => s.pipeline === "blue")
-    .sort(byOldest);
+    .sort(byNewest);
 
   // Setting a student's pipeline. Entering Dark blue marks it unseen so the
   // admin gets a "New" badge until they review it.
