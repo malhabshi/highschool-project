@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
-import { useStudents, type Student } from "@/lib/students";
-import { useUsers, nameOf } from "@/lib/users";
+import { useStudents, duplicatesOf, type Student } from "@/lib/students";
+import { useUsers, nameOf, type User } from "@/lib/users";
 
 // Format an ISO timestamp in Kuwait local time.
 function fmtKuwait(iso: string) {
@@ -88,6 +88,9 @@ export function MyStudents() {
             accent="bg-slate-300"
             students={none}
             onSet={setPipeline}
+            all={students}
+            users={users}
+            isAdmin={isAdmin}
           />
           <Column
             title="Dark blue"
@@ -104,12 +107,18 @@ export function MyStudents() {
                     })
                 : undefined
             }
+            all={students}
+            users={users}
+            isAdmin={isAdmin}
           />
           <Column
             title="Yellow"
             accent="bg-yellow-400"
             students={yellow}
             onSet={setPipeline}
+            all={students}
+            users={users}
+            isAdmin={isAdmin}
           />
         </div>
       )}
@@ -124,6 +133,9 @@ function Column({
   onSet,
   badgeFor,
   onSend,
+  all,
+  users,
+  isAdmin,
 }: {
   title: string;
   accent: string;
@@ -131,6 +143,9 @@ function Column({
   onSet: (id: string, v: string) => void;
   badgeFor?: (s: Student) => string;
   onSend?: (id: string) => void;
+  all: Student[];
+  users: User[];
+  isAdmin: boolean;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
@@ -150,7 +165,9 @@ function Column({
             No students here.
           </p>
         ) : (
-          students.map((s) => (
+          students.map((s) => {
+            const dups = duplicatesOf(all, s);
+            return (
             <div
               key={s.id}
               className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
@@ -177,6 +194,26 @@ function Column({
               {s.school && (
                 <div className="text-xs text-slate-500">{s.school}</div>
               )}
+              {dups.length > 0 && (
+                <div className="mt-1">
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                    Duplicated phone
+                  </span>
+                  {isAdmin && (
+                    <div className="mt-0.5 text-[11px] text-amber-700">
+                      Also held by{" "}
+                      {dups
+                        .map(
+                          (d) =>
+                            `${nameOf(users, d.assignedTo)} (${
+                              d.source === "my-students" ? "employee" : "admin"
+                            })`
+                        )
+                        .join(", ")}
+                    </div>
+                  )}
+                </div>
+              )}
               {s.sentToMasarAt && (
                 <div className="mt-1 text-xs font-medium text-green-700">
                   Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
@@ -198,7 +235,8 @@ function Column({
                 )}
               </div>
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
