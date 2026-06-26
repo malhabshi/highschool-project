@@ -102,7 +102,9 @@ function Column({
           <span className={`h-3 w-3 rounded-full ${accent}`} />
           <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
         </div>
-        <span className="text-xs text-slate-500">{students.length}</span>
+        <span className="rounded-full bg-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-700">
+          {students.length} {students.length === 1 ? "student" : "students"}
+        </span>
       </div>
 
       <div className="space-y-3 p-3">
