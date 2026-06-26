@@ -21,6 +21,7 @@ export type Student = {
   sentToMasarAt?: string | null; // ISO timestamp when admin sent it to Masar
   createdAt?: string;
   gender?: string; // "M" | "F" | "N/A"
+  studentNumber?: string; // set for students imported via bulk upload
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -48,6 +49,7 @@ type Row = {
   sent_to_masar_at: string | null;
   created_at: string | null;
   gender: string | null;
+  student_number: string | null;
 };
 
 function fromRow(r: Row): Student {
@@ -67,6 +69,7 @@ function fromRow(r: Row): Student {
     sentToMasarAt: r.sent_to_masar_at ?? null,
     createdAt: r.created_at ?? undefined,
     gender: r.gender ?? "N/A",
+    studentNumber: r.student_number ?? undefined,
   };
 }
 
@@ -87,6 +90,8 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
   if (patch.blueSeen !== undefined) row.blue_seen = patch.blueSeen;
   if (patch.sentToMasarAt !== undefined) row.sent_to_masar_at = patch.sentToMasarAt;
   if (patch.gender !== undefined) row.gender = patch.gender ?? null;
+  if (patch.studentNumber !== undefined)
+    row.student_number = patch.studentNumber ?? null;
   return row;
 }
 
@@ -157,6 +162,7 @@ export function useStudents() {
         assignedTo: string;
         tag?: string;
         gender?: string;
+        studentNumber?: string;
       }[]
     ) => {
       await supabase.from("students").insert(
@@ -167,6 +173,7 @@ export function useStudents() {
           assigned_to: d.assignedTo || null,
           tag: d.tag ?? null,
           gender: d.gender ?? "N/A",
+          student_number: d.studentNumber ?? null,
         }))
       );
     },

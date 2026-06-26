@@ -242,6 +242,14 @@ export function StudentProfile({ id }: { id: string }) {
         {!editing && (
           <>
             <dl className="space-y-3 pt-6 text-sm">
+              {student.studentNumber && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate-500">Student number</dt>
+                  <dd className="font-medium text-slate-800">
+                    {student.studentNumber}
+                  </dd>
+                </div>
+              )}
               <div className="flex justify-between gap-4">
                 <dt className="text-slate-500">School name</dt>
                 <dd className="font-medium text-slate-800">{student.school}</dd>

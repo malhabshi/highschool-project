@@ -498,6 +498,7 @@ type BulkRow = {
   assignedTo: string;
   tag?: string;
   gender?: string;
+  studentNumber?: string;
 };
 
 // Normalize a free-text gender cell to "M" | "F" | "N/A".
@@ -520,8 +521,8 @@ function BulkUploadPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,School,Gender\n" +
-      "Example Student,90001234,Example School,M\n";
+      "Name,Phone,School,Gender,Student Number\n" +
+      "Example Student,90001234,Example School,M,2024001\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -555,12 +556,21 @@ function BulkUploadPanel({
         const phone = (r[1] ?? "").replace(/\D/g, "");
         const school = (r[2] ?? "").trim();
         const gender = normGender(r[3] ?? "");
+        const studentNumber = (r[4] ?? "").trim();
         if (!name || !/^\d{8}$/.test(phone)) {
           skipped++;
           continue;
         }
         // Imported unassigned, tagged with the list name.
-        valid.push({ name, phone, school, assignedTo: "", tag: listTag, gender });
+        valid.push({
+          name,
+          phone,
+          school,
+          assignedTo: "",
+          tag: listTag,
+          gender,
+          studentNumber,
+        });
       }
       if (valid.length) onImport(valid);
       setResult(
@@ -578,9 +588,11 @@ function BulkUploadPanel({
       <h3 className="font-semibold text-slate-800">Bulk upload students</h3>
       <p className="text-sm text-slate-500">
         Download the template, fill it in (columns:{" "}
-        <span className="font-medium">Name, Phone, School, Gender</span>), then
-        upload it. Name and an 8-digit Phone are required; School is optional;
-        Gender is M, F, or N/A.
+        <span className="font-medium">
+          Name, Phone, School, Gender, Student Number
+        </span>
+        ), then upload it. Name and an 8-digit Phone are required; School,
+        Gender (M, F, N/A) and Student Number are optional.
         Uploaded students come in <span className="font-medium">unassigned</span>
         {" "}— select them in the list and use{" "}
         <span className="font-medium">Assign</span> to give them to an employee.
