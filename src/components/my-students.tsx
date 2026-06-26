@@ -3,29 +3,30 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
-import { useStudents } from "@/lib/students";
+import { useStudents, type Student } from "@/lib/students";
 
-// Shows the students assigned to the logged-in user, and lets them add new ones.
+// Shows the students assigned to the logged-in user, split into 3 pipeline
+// columns, and lets them add new ones.
 export function MyStudents() {
   const { user } = useRole();
   const { students, addStudent, update, loaded } = useStudents();
   const [adding, setAdding] = useState(false);
 
   const mine = students.filter((s) => s.assignedTo === user.id);
+  const none = mine.filter((s) => s.pipeline !== "yellow" && s.pipeline !== "blue");
+  const yellow = mine.filter((s) => s.pipeline === "yellow");
+  const blue = mine.filter((s) => s.pipeline === "blue");
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
-        <h2 className="text-lg font-semibold text-slate-800">My Students</h2>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-slate-500">{mine.length} total</span>
-          <button
-            onClick={() => setAdding(true)}
-            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-          >
-            + Add student
-          </button>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-slate-500">{mine.length} total</span>
+        <button
+          onClick={() => setAdding(true)}
+          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+        >
+          + Add student
+        </button>
       </div>
 
       {adding && (
@@ -40,55 +41,90 @@ export function MyStudents() {
 
       {!loaded ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">Loading…</p>
-      ) : mine.length === 0 ? (
-        <p className="px-5 py-8 text-center text-sm text-slate-500">
-          No students are assigned to you yet. Click “Add student” to create one.
-        </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-sm">
-            <thead className="text-xs uppercase text-slate-500">
-              <tr className="border-b border-slate-100">
-                <th className="px-5 py-3 font-medium">Student</th>
-                <th className="px-5 py-3 font-medium">Phone</th>
-                <th className="px-5 py-3 font-medium">School</th>
-                <th className="px-5 py-3 font-medium">Pipeline</th>
-              </tr>
-            </thead>
-            <tbody>
-              {mine.map((s) => (
-                <tr
-                  key={s.id}
-                  className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                >
-                  <td className="px-5 py-3">
-                    <Link
-                      href={`/student/${s.id}`}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      {s.name}
-                    </Link>
-                  </td>
-                  <td className="px-5 py-3 text-slate-600">{s.phone}</td>
-                  <td className="px-5 py-3 text-slate-600">{s.school || "—"}</td>
-                  <td className="px-5 py-3">
-                    <PipelinePicker
-                      value={s.pipeline}
-                      onChange={(v) => update(s.id, { pipeline: v })}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <Column
+            title="No pipeline yet"
+            accent="bg-slate-300"
+            students={none}
+            onSet={(id, v) => update(id, { pipeline: v })}
+          />
+          <Column
+            title="Yellow"
+            accent="bg-yellow-400"
+            students={yellow}
+            onSet={(id, v) => update(id, { pipeline: v })}
+          />
+          <Column
+            title="Dark blue"
+            accent="bg-blue-800"
+            students={blue}
+            onSet={(id, v) => update(id, { pipeline: v })}
+          />
         </div>
       )}
     </div>
   );
 }
 
-// Clickable yellow/blue buttons to set a student's pipeline color after creation.
-// Clicking the active color again clears it.
+function Column({
+  title,
+  accent,
+  students,
+  onSet,
+}: {
+  title: string;
+  accent: string;
+  students: Student[];
+  onSet: (id: string, v: string) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
+      <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+        <div className="flex items-center gap-2">
+          <span className={`h-3 w-3 rounded-full ${accent}`} />
+          <h2 className="text-sm font-semibold text-slate-800">{title}</h2>
+        </div>
+        <span className="text-xs text-slate-500">{students.length}</span>
+      </div>
+
+      <div className="space-y-3 p-3">
+        {students.length === 0 ? (
+          <p className="px-2 py-6 text-center text-xs text-slate-400">
+            No students here.
+          </p>
+        ) : (
+          students.map((s) => (
+            <div
+              key={s.id}
+              className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+            >
+              <Link
+                href={`/student/${s.id}`}
+                className="font-medium text-blue-600 hover:underline"
+              >
+                {s.name}
+              </Link>
+              <div className="mt-1 text-xs text-slate-500">{s.phone}</div>
+              {s.school && (
+                <div className="text-xs text-slate-500">{s.school}</div>
+              )}
+              <div className="mt-2 border-t border-slate-100 pt-2">
+                <PipelinePicker
+                  value={s.pipeline}
+                  onChange={(v) => onSet(s.id, v)}
+                />
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Clickable yellow/blue buttons to move a student between pipeline columns.
+// Clicking the active color again clears it (back to "No pipeline yet").
 function PipelinePicker({
   value,
   onChange,
@@ -98,7 +134,7 @@ function PipelinePicker({
 }) {
   const options = [
     { v: "yellow", label: "Yellow", dot: "bg-yellow-400", ring: "ring-yellow-400" },
-    { v: "blue", label: "Blue", dot: "bg-blue-500", ring: "ring-blue-500" },
+    { v: "blue", label: "Dark blue", dot: "bg-blue-800", ring: "ring-blue-800" },
   ];
   return (
     <div className="flex items-center gap-2">
@@ -153,7 +189,7 @@ function AddMyStudentForm({
   }
 
   return (
-    <div className="space-y-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 px-5 py-4 shadow-sm">
       <h3 className="font-semibold text-slate-800">Add a student</h3>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <label className="block">
@@ -193,8 +229,8 @@ function AddMyStudentForm({
       </div>
 
       <p className="text-xs text-slate-500">
-        Tip: after the student is added, pick a Yellow or Blue pipeline from the
-        list.
+        New students start in “No pipeline yet”. Pick Yellow or Dark blue on the
+        card to move them.
       </p>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
