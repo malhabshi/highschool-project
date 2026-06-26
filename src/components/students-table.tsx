@@ -509,6 +509,14 @@ function normGender(raw: string) {
   return "N/A";
 }
 
+// Normalize a phone cell: keep digits only and strip the Kuwait country code.
+function normPhone(raw: string) {
+  let p = (raw ?? "").replace(/\D/g, "");
+  if (p.startsWith("00965")) p = p.slice(5);
+  else if (p.startsWith("965") && p.length > 8) p = p.slice(3);
+  return p;
+}
+
 function BulkUploadPanel({
   onImport,
   onCancel,
@@ -547,23 +555,31 @@ function BulkUploadPanel({
       const text = String(reader.result ?? "");
       const rows = parseCSV(text).filter((r) => r.some((c) => c.trim() !== ""));
       // Drop the header row if it looks like one.
-      if (rows[0]?.[0]?.trim().toLowerCase() === "name") rows.shift();
+      const head0 = rows[0]?.[0]?.trim().toLowerCase();
+      if (head0 === "name" || head0 === "phone") rows.shift();
 
       const valid: BulkRow[] = [];
       let skipped = 0;
       for (const r of rows) {
-        const name = (r[0] ?? "").trim();
-        const phone = (r[1] ?? "").replace(/\D/g, "");
+        let name = (r[0] ?? "").trim();
+        let phone = normPhone(r[1] ?? "");
+        // If the phone column is empty but the first column holds the number
+        // (a phone-only file), use that instead.
+        if (!phone && normPhone(name)) {
+          phone = normPhone(name);
+          name = "";
+        }
         const school = (r[2] ?? "").trim();
         const gender = normGender(r[3] ?? "");
         const studentNumber = (r[4] ?? "").trim();
-        if (!name || !/^\d{8}$/.test(phone)) {
+        // Only the phone is required; everything else is optional.
+        if (!phone) {
           skipped++;
           continue;
         }
         // Imported unassigned, tagged with the list name.
         valid.push({
-          name,
+          name: name || phone,
           phone,
           school,
           assignedTo: "",
@@ -591,8 +607,10 @@ function BulkUploadPanel({
         <span className="font-medium">
           Name, Phone, School, Gender, Student Number
         </span>
-        ), then upload it. Name and an 8-digit Phone are required; School,
-        Gender (M, F, N/A) and Student Number are optional.
+        ), then upload it. <span className="font-medium">Only Phone is
+        required</span> — everything else is optional. Numbers with the Kuwait
+        country code (965…) are accepted and trimmed automatically. Rows with no
+        name show the phone number as the name.
         Uploaded students come in <span className="font-medium">unassigned</span>
         {" "}— select them in the list and use{" "}
         <span className="font-medium">Assign</span> to give them to an employee.
