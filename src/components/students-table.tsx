@@ -36,8 +36,14 @@ export function StudentsTable() {
 
   const { questions } = useQuestions();
   const cardB = questions[1]?.id; // the "B" question
+  const cardD = questions[3]?.id; // the "D" question
   const isCardBYes = (s: { answers?: Record<string, unknown> }) =>
     !!cardB && s.answers?.[cardB] === true;
+  const isCardDYes = (s: { answers?: Record<string, unknown> }) =>
+    !!cardD && s.answers?.[cardD] === true;
+  // "Important" = answered Yes to both B and D (admin only).
+  const isImportant = (s: { answers?: Record<string, unknown> }) =>
+    isAdmin && isCardBYes(s) && isCardDYes(s);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
   const [adding, setAdding] = useState(false);
@@ -74,11 +80,12 @@ export function StudentsTable() {
     return true;
   });
 
-  // Students who answered "Yes" to question B float to the top.
+  // Ranking for ordering: Important (B & D) at the very top, then Yes-to-B,
+  // then everyone else.
+  const rank = (s: { answers?: Record<string, unknown> }) =>
+    isImportant(s) ? 2 : isCardBYes(s) ? 1 : 0;
   const ordered = cardB
-    ? [...students].sort(
-        (a, b) => (isCardBYes(b) ? 1 : 0) - (isCardBYes(a) ? 1 : 0)
-      )
+    ? [...students].sort((a, b) => rank(b) - rank(a))
     : students;
 
   function toggleOne(id: string) {
@@ -289,6 +296,11 @@ export function StudentsTable() {
                           className="text-green-600"
                         >
                           ✓
+                        </span>
+                      )}
+                      {isImportant(s) && (
+                        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                          Important
                         </span>
                       )}
                     </span>
