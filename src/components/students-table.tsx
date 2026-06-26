@@ -323,30 +323,29 @@ export function StudentsTable() {
                           Deletion requested
                         </span>
                       )}
-                      {isCardBYes(s) &&
+                      {isAdmin &&
+                        isCardBYes(s) &&
                         (s.sentToMasarAt ? (
                           <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
                             Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
                           </span>
                         ) : (
-                          isAdmin && (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                update(s.id, {
-                                  sentToMasarAt: new Date().toISOString(),
-                                })
-                              }
-                              className="rounded-md bg-blue-800 px-2 py-0.5 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
-                            >
-                              Send to Masar
-                            </button>
-                          )
+                          <button
+                            type="button"
+                            onClick={() =>
+                              update(s.id, {
+                                sentToMasarAt: new Date().toISOString(),
+                              })
+                            }
+                            className="rounded-md bg-blue-800 px-2 py-0.5 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
+                          >
+                            Send to Masar
+                          </button>
                         ))}
                       {!s.tag &&
                         !isDuplicate &&
                         !s.deletionRequested &&
-                        !isCardBYes(s) && (
+                        !(isAdmin && isCardBYes(s)) && (
                           <span className="text-xs text-slate-400">—</span>
                         )}
                     </div>
