@@ -101,11 +101,22 @@ export function useStudents() {
   const [loaded, setLoaded] = useState(false);
 
   const refetch = useCallback(async () => {
-    const { data } = await supabase
-      .from("students")
-      .select("*")
-      .order("created_at", { ascending: true });
-    setStudents((data ?? []).map((r) => fromRow(r as Row)));
+    // Supabase returns at most 1000 rows per request, so page through them all.
+    const pageSize = 1000;
+    let from = 0;
+    const all: Row[] = [];
+    for (;;) {
+      const { data, error } = await supabase
+        .from("students")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error || !data || data.length === 0) break;
+      all.push(...(data as Row[]));
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    setStudents(all.map((r) => fromRow(r)));
     setLoaded(true);
   }, []);
 
