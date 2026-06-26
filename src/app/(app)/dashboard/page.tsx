@@ -1,6 +1,7 @@
 import { Announcements } from "@/components/announcements";
 import { Events } from "@/components/events";
 import { StatCards } from "@/components/stat-cards";
+import { DashboardChat } from "@/components/dashboard-chat";
 
 export default function DashboardPage() {
   return (
@@ -19,13 +20,8 @@ export default function DashboardPage() {
       {/* Stat cards (Staff Users only shows for admin) */}
       <StatCards />
 
-      {/* Placeholder panel */}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="font-semibold text-slate-800">Recent activity</h3>
-        <p className="mt-2 text-sm text-slate-500">
-          Nothing here yet. We&apos;ll fill this in as we add students.
-        </p>
-      </div>
+      {/* Employee chat with the admin (hidden for admins) */}
+      <DashboardChat />
     </div>
   );
 }
