@@ -4,22 +4,28 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useStudents, type Student } from "@/lib/students";
+import { useUsers, nameOf } from "@/lib/users";
 
 // Shows the students assigned to the logged-in user, split into 3 pipeline
 // columns, and lets them add new ones.
 export function MyStudents() {
-  const { user } = useRole();
+  const { user, role } = useRole();
+  const isAdmin = role === "admin";
+  const { users } = useUsers();
   const { students, addStudent, update, loaded } = useStudents();
   const [adding, setAdding] = useState(false);
 
   // Only students created here on the My Students page (kept separate from the
-  // Students page pool).
-  const mine = students.filter(
-    (s) => s.assignedTo === user.id && s.source === "my-students"
-  );
+  // Students page pool). Each user manages their own.
+  const onPage = students.filter((s) => s.source === "my-students");
+  const mine = onPage.filter((s) => s.assignedTo === user.id);
+
   const none = mine.filter((s) => s.pipeline !== "yellow" && s.pipeline !== "blue");
   const yellow = mine.filter((s) => s.pipeline === "yellow");
-  const blue = mine.filter((s) => s.pipeline === "blue");
+
+  // Dark blue: an employee sees their own; the admin sees everyone's, so they
+  // can review what each user moved into the dark-blue stage.
+  const blue = (isAdmin ? onPage : mine).filter((s) => s.pipeline === "blue");
 
   return (
     <div className="space-y-4">
@@ -68,6 +74,7 @@ export function MyStudents() {
             accent="bg-blue-800"
             students={blue}
             onSet={(id, v) => update(id, { pipeline: v })}
+            badgeFor={isAdmin ? (s) => nameOf(users, s.assignedTo) : undefined}
           />
         </div>
       )}
@@ -80,11 +87,13 @@ function Column({
   accent,
   students,
   onSet,
+  badgeFor,
 }: {
   title: string;
   accent: string;
   students: Student[];
   onSet: (id: string, v: string) => void;
+  badgeFor?: (s: Student) => string;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
@@ -107,12 +116,19 @@ function Column({
               key={s.id}
               className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
             >
-              <Link
-                href={`/student/${s.id}`}
-                className="font-medium text-blue-600 hover:underline"
-              >
-                {s.name}
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/student/${s.id}`}
+                  className="font-medium text-blue-600 hover:underline"
+                >
+                  {s.name}
+                </Link>
+                {badgeFor && (
+                  <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                    {badgeFor(s)}
+                  </span>
+                )}
+              </div>
               <div className="mt-1 text-xs text-slate-500">{s.phone}</div>
               {s.school && (
                 <div className="text-xs text-slate-500">{s.school}</div>
