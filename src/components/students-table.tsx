@@ -33,10 +33,14 @@ export function StudentsTable() {
   const setFilter = (id: string, v: string) =>
     setFilters((prev) => ({ ...prev, [id]: v }));
 
+  // Keep this page separate from the My Students page: hide students that were
+  // created over there.
+  const base = all.filter((s) => s.source !== "my-students");
+
   // Admin sees every student; an employee sees only their assigned students.
   const roleList = isAdmin
-    ? all
-    : all.filter((s) => s.assignedTo === user.id);
+    ? base
+    : base.filter((s) => s.assignedTo === user.id);
 
   // Apply the question filters.
   const students = roleList.filter((s) => {
@@ -233,7 +237,7 @@ export function StudentsTable() {
           </thead>
           <tbody>
             {students.map((s) => {
-              const isDuplicate = duplicatesOf(all, s).length > 0;
+              const isDuplicate = duplicatesOf(base, s).length > 0;
               return (
                 <tr
                   key={s.id}

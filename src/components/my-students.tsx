@@ -12,7 +12,11 @@ export function MyStudents() {
   const { students, addStudent, update, loaded } = useStudents();
   const [adding, setAdding] = useState(false);
 
-  const mine = students.filter((s) => s.assignedTo === user.id);
+  // Only students created here on the My Students page (kept separate from the
+  // Students page pool).
+  const mine = students.filter(
+    (s) => s.assignedTo === user.id && s.source === "my-students"
+  );
   const none = mine.filter((s) => s.pipeline !== "yellow" && s.pipeline !== "blue");
   const yellow = mine.filter((s) => s.pipeline === "yellow");
   const blue = mine.filter((s) => s.pipeline === "blue");
@@ -33,7 +37,11 @@ export function MyStudents() {
         <AddMyStudentForm
           onCancel={() => setAdding(false)}
           onAdd={async (data) => {
-            await addStudent({ ...data, assignedTo: user.id });
+            await addStudent({
+              ...data,
+              assignedTo: user.id,
+              source: "my-students",
+            });
             setAdding(false);
           }}
         />
