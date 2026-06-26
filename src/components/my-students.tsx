@@ -64,17 +64,17 @@ export function MyStudents() {
             onSet={(id, v) => update(id, { pipeline: v })}
           />
           <Column
-            title="Yellow"
-            accent="bg-yellow-400"
-            students={yellow}
-            onSet={(id, v) => update(id, { pipeline: v })}
-          />
-          <Column
             title="Dark blue"
             accent="bg-blue-800"
             students={blue}
             onSet={(id, v) => update(id, { pipeline: v })}
             badgeFor={isAdmin ? (s) => nameOf(users, s.assignedTo) : undefined}
+          />
+          <Column
+            title="Yellow"
+            accent="bg-yellow-400"
+            students={yellow}
+            onSet={(id, v) => update(id, { pipeline: v })}
           />
         </div>
       )}
