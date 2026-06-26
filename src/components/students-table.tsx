@@ -41,9 +41,11 @@ export function StudentsTable() {
     !!cardB && s.answers?.[cardB] === true;
   const isCardDYes = (s: { answers?: Record<string, unknown> }) =>
     !!cardD && s.answers?.[cardD] === true;
-  // "Important" = answered Yes to both B and D (admin only).
-  const isImportant = (s: { answers?: Record<string, unknown> }) =>
-    isAdmin && isCardBYes(s) && isCardDYes(s);
+  // "Important" = answered Yes to both B and D, not yet sent (admin only).
+  const isImportant = (s: {
+    answers?: Record<string, unknown>;
+    sentToMasarAt?: string | null;
+  }) => isAdmin && !s.sentToMasarAt && isCardBYes(s) && isCardDYes(s);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
   const [adding, setAdding] = useState(false);
