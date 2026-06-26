@@ -113,7 +113,7 @@ export function useStudents() {
       pipeline?: string;
       source?: string;
     }) => {
-      const { data: rows } = await supabase
+      const { data: rows, error } = await supabase
         .from("students")
         .insert({
           name: data.name,
@@ -124,6 +124,7 @@ export function useStudents() {
           source: data.source ?? null,
         })
         .select();
+      if (error) throw new Error(error.message);
       // Optimistically show it right away (realtime will reconcile).
       if (rows?.[0]) setStudents((prev) => [...prev, fromRow(rows[0] as Row)]);
     },
