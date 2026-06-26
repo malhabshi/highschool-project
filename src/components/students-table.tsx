@@ -57,6 +57,9 @@ export function StudentsTable() {
   // Filter by school name ("any" | a school name).
   const [schoolFilter, setSchoolFilter] = useState("any");
 
+  // Filter by gender ("any" | "M" | "F" | "N/A").
+  const [genderFilter, setGenderFilter] = useState("any");
+
   // Filters keyed by question id (value "any" by default).
   const [filters, setFilters] = useState<Record<string, string>>({});
   const setFilter = (id: string, v: string) =>
@@ -86,6 +89,8 @@ export function StudentsTable() {
       }
     }
     if (schoolFilter !== "any" && s.school !== schoolFilter) return false;
+    if (genderFilter !== "any" && (s.gender ?? "N/A") !== genderFilter)
+      return false;
     for (const q of questions) {
       const f = filters[q.id] ?? "any";
       if (f === "any") continue;
@@ -249,6 +254,17 @@ export function StudentsTable() {
             options={[
               { v: "any", l: "Any" },
               ...schools.map((sc) => ({ v: sc, l: sc })),
+            ]}
+          />
+          <FilterSelect
+            label="Gender"
+            value={genderFilter}
+            onChange={setGenderFilter}
+            options={[
+              { v: "any", l: "Any" },
+              { v: "M", l: "M" },
+              { v: "F", l: "F" },
+              { v: "N/A", l: "N/A" },
             ]}
           />
           {questions.map((q) => (
@@ -481,7 +497,16 @@ type BulkRow = {
   school?: string;
   assignedTo: string;
   tag?: string;
+  gender?: string;
 };
+
+// Normalize a free-text gender cell to "M" | "F" | "N/A".
+function normGender(raw: string) {
+  const v = raw.trim().toUpperCase();
+  if (v === "M" || v === "MALE") return "M";
+  if (v === "F" || v === "FEMALE") return "F";
+  return "N/A";
+}
 
 function BulkUploadPanel({
   onImport,
@@ -495,7 +520,8 @@ function BulkUploadPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,School\n" + "Example Student,90001234,Example School\n";
+      "Name,Phone,School,Gender\n" +
+      "Example Student,90001234,Example School,M\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -528,12 +554,13 @@ function BulkUploadPanel({
         const name = (r[0] ?? "").trim();
         const phone = (r[1] ?? "").replace(/\D/g, "");
         const school = (r[2] ?? "").trim();
+        const gender = normGender(r[3] ?? "");
         if (!name || !/^\d{8}$/.test(phone)) {
           skipped++;
           continue;
         }
         // Imported unassigned, tagged with the list name.
-        valid.push({ name, phone, school, assignedTo: "", tag: listTag });
+        valid.push({ name, phone, school, assignedTo: "", tag: listTag, gender });
       }
       if (valid.length) onImport(valid);
       setResult(
@@ -551,8 +578,9 @@ function BulkUploadPanel({
       <h3 className="font-semibold text-slate-800">Bulk upload students</h3>
       <p className="text-sm text-slate-500">
         Download the template, fill it in (columns:{" "}
-        <span className="font-medium">Name, Phone, School</span>), then upload
-        it. Name and an 8-digit Phone are required; School is optional.
+        <span className="font-medium">Name, Phone, School, Gender</span>), then
+        upload it. Name and an 8-digit Phone are required; School is optional;
+        Gender is M, F, or N/A.
         Uploaded students come in <span className="font-medium">unassigned</span>
         {" "}— select them in the list and use{" "}
         <span className="font-medium">Assign</span> to give them to an employee.
@@ -607,12 +635,14 @@ function AddStudentForm({
     phone: string;
     school?: string;
     assignedTo: string;
+    gender: string;
   }) => void;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
+  const [gender, setGender] = useState("N/A");
   const [assignedTo, setAssignedTo] = useState(employees[0]?.id ?? "");
   const [error, setError] = useState("");
 
@@ -620,7 +650,7 @@ function AddStudentForm({
     if (!name.trim()) return setError("Name is required.");
     if (!/^\d{8}$/.test(phone)) return setError("Phone must be exactly 8 digits.");
     if (!assignedTo) return setError("Please assign an employee.");
-    onAdd({ name: name.trim(), phone, school: school.trim(), assignedTo });
+    onAdd({ name: name.trim(), phone, school: school.trim(), assignedTo, gender });
   }
 
   return (
@@ -660,6 +690,20 @@ function AddStudentForm({
             onChange={(e) => setSchool(e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
           />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            Gender
+          </span>
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+          >
+            <option value="M">M</option>
+            <option value="F">F</option>
+            <option value="N/A">N/A</option>
+          </select>
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-slate-600">

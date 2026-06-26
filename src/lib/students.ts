@@ -20,6 +20,7 @@ export type Student = {
   blueSeen?: boolean; // admin has reviewed this dark-blue student
   sentToMasarAt?: string | null; // ISO timestamp when admin sent it to Masar
   createdAt?: string;
+  gender?: string; // "M" | "F" | "N/A"
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -46,6 +47,7 @@ type Row = {
   blue_seen: boolean | null;
   sent_to_masar_at: string | null;
   created_at: string | null;
+  gender: string | null;
 };
 
 function fromRow(r: Row): Student {
@@ -64,6 +66,7 @@ function fromRow(r: Row): Student {
     blueSeen: r.blue_seen ?? false,
     sentToMasarAt: r.sent_to_masar_at ?? null,
     createdAt: r.created_at ?? undefined,
+    gender: r.gender ?? "N/A",
   };
 }
 
@@ -83,6 +86,7 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
   if (patch.source !== undefined) row.source = patch.source ?? null;
   if (patch.blueSeen !== undefined) row.blue_seen = patch.blueSeen;
   if (patch.sentToMasarAt !== undefined) row.sent_to_masar_at = patch.sentToMasarAt;
+  if (patch.gender !== undefined) row.gender = patch.gender ?? null;
   return row;
 }
 
@@ -123,6 +127,7 @@ export function useStudents() {
       assignedTo: string;
       pipeline?: string;
       source?: string;
+      gender?: string;
     }) => {
       const { data: rows, error } = await supabase
         .from("students")
@@ -133,6 +138,7 @@ export function useStudents() {
           assigned_to: data.assignedTo || null,
           pipeline: data.pipeline ?? null,
           source: data.source ?? null,
+          gender: data.gender ?? "N/A",
         })
         .select();
       if (error) throw new Error(error.message);
@@ -150,6 +156,7 @@ export function useStudents() {
         school?: string;
         assignedTo: string;
         tag?: string;
+        gender?: string;
       }[]
     ) => {
       await supabase.from("students").insert(
@@ -159,6 +166,7 @@ export function useStudents() {
           school: d.school ?? "",
           assigned_to: d.assignedTo || null,
           tag: d.tag ?? null,
+          gender: d.gender ?? "N/A",
         }))
       );
     },

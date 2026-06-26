@@ -286,12 +286,14 @@ function AddMyStudentForm({
     name: string;
     phone: string;
     school: string;
+    gender: string;
   }) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
+  const [gender, setGender] = useState("N/A");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -300,7 +302,7 @@ function AddMyStudentForm({
     if (!/^\d{8}$/.test(phone)) return setError("Phone must be exactly 8 digits.");
     setBusy(true);
     try {
-      await onAdd({ name: name.trim(), phone, school: school.trim() });
+      await onAdd({ name: name.trim(), phone, school: school.trim(), gender });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -345,6 +347,20 @@ function AddMyStudentForm({
             onChange={(e) => setSchool(e.target.value)}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
           />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            Gender
+          </span>
+          <select
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+          >
+            <option value="M">M</option>
+            <option value="F">F</option>
+            <option value="N/A">N/A</option>
+          </select>
         </label>
       </div>
 

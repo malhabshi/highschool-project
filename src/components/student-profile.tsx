@@ -39,6 +39,7 @@ export function StudentProfile({ id }: { id: string }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
+  const [gender, setGender] = useState("N/A");
   const [error, setError] = useState("");
 
   // Notes is edited locally and saved on blur (so live updates don't interrupt typing).
@@ -87,6 +88,7 @@ export function StudentProfile({ id }: { id: string }) {
     setName(student.name);
     setPhone(student.phone);
     setSchool(student.school);
+    setGender(student.gender ?? "N/A");
     setError("");
     setEditing(true);
   }
@@ -100,6 +102,7 @@ export function StudentProfile({ id }: { id: string }) {
       name: name.trim(),
       phone,
       school: school.trim(),
+      gender,
     });
     setEditing(false);
   }
@@ -243,6 +246,12 @@ export function StudentProfile({ id }: { id: string }) {
                 <dt className="text-slate-500">School name</dt>
                 <dd className="font-medium text-slate-800">{student.school}</dd>
               </div>
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">Gender</dt>
+                <dd className="font-medium text-slate-800">
+                  {student.gender ?? "N/A"}
+                </dd>
+              </div>
             </dl>
 
             {/* Delete / deletion request */}
@@ -306,6 +315,17 @@ export function StudentProfile({ id }: { id: string }) {
                 onChange={(e) => setSchool(e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
               />
+            </Field>
+            <Field label="Gender">
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500"
+              >
+                <option value="M">M</option>
+                <option value="F">F</option>
+                <option value="N/A">N/A</option>
+              </select>
             </Field>
 
             {error && <p className="text-sm text-red-600">{error}</p>}
