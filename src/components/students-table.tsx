@@ -60,6 +60,9 @@ export function StudentsTable() {
   // Filter by gender ("any" | "M" | "F" | "N/A").
   const [genderFilter, setGenderFilter] = useState("any");
 
+  // Filter by list name ("any" | a list/tag name).
+  const [listFilter, setListFilter] = useState("any");
+
   // Pagination.
   const PAGE_SIZE = 50;
   const [page, setPage] = useState(1);
@@ -72,7 +75,7 @@ export function StudentsTable() {
   // Back to page 1 whenever a filter changes.
   useEffect(() => {
     setPage(1);
-  }, [assignFilter, schoolFilter, genderFilter, filters]);
+  }, [assignFilter, schoolFilter, genderFilter, listFilter, filters]);
 
   // Keep this page separate from the My Students page: hide students that were
   // created over there.
@@ -88,6 +91,11 @@ export function StudentsTable() {
     new Set(roleList.map((s) => s.school).filter(Boolean))
   ).sort();
 
+  // Distinct list names (tags) available to this user.
+  const lists = Array.from(
+    new Set(roleList.map((s) => s.tag).filter(Boolean))
+  ).sort() as string[];
+
   // Apply the assignment + school + question filters.
   const students = roleList.filter((s) => {
     if (isAdmin && assignFilter !== "any") {
@@ -100,6 +108,7 @@ export function StudentsTable() {
     if (schoolFilter !== "any" && s.school !== schoolFilter) return false;
     if (genderFilter !== "any" && (s.gender ?? "N/A") !== genderFilter)
       return false;
+    if (listFilter !== "any" && (s.tag ?? "") !== listFilter) return false;
     for (const q of questions) {
       const f = filters[q.id] ?? "any";
       if (f === "any") continue;
@@ -282,6 +291,15 @@ export function StudentsTable() {
               { v: "M", l: "M" },
               { v: "F", l: "F" },
               { v: "N/A", l: "N/A" },
+            ]}
+          />
+          <FilterSelect
+            label="List name"
+            value={listFilter}
+            onChange={setListFilter}
+            options={[
+              { v: "any", l: "Any" },
+              ...lists.map((t) => ({ v: t, l: t })),
             ]}
           />
           {questions.map((q) => (
