@@ -329,17 +329,19 @@ export function StudentsTable() {
                             Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
                           </span>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              update(s.id, {
-                                sentToMasarAt: new Date().toISOString(),
-                              })
-                            }
-                            className="rounded-md bg-blue-800 px-2 py-0.5 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
-                          >
-                            Send to Masar
-                          </button>
+                          isAdmin && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                update(s.id, {
+                                  sentToMasarAt: new Date().toISOString(),
+                                })
+                              }
+                              className="rounded-md bg-blue-800 px-2 py-0.5 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
+                            >
+                              Send to Masar
+                            </button>
+                          )
                         ))}
                       {!s.tag &&
                         !isDuplicate &&

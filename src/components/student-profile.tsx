@@ -13,6 +13,18 @@ import {
 } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
 
+// Format an ISO timestamp in Kuwait local time.
+function fmtKuwait(iso: string) {
+  return new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Asia/Kuwait",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function StudentProfile({ id }: { id: string }) {
   const router = useRouter();
   const { user, role } = useRole();
@@ -109,6 +121,11 @@ export function StudentProfile({ id }: { id: string }) {
   const duplicates = duplicatesOf(students, student);
   const isAdmin = role === "admin";
 
+  // "Send to Masar" is admin-only and applies to students who answered Yes to
+  // question B.
+  const cardB = questions[1]?.id;
+  const cardBYes = !!cardB && student.answers?.[cardB] === true;
+
   // The list this user can navigate (admin: all; employee: their own),
   // in the same order as the Students table.
   const accessible =
@@ -181,14 +198,34 @@ export function StudentProfile({ id }: { id: string }) {
               </span>
             )}
           </div>
-          {!editing && (
-            <button
-              onClick={startEdit}
-              className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-            >
-              Edit
-            </button>
-          )}
+          <div className="flex shrink-0 items-center gap-2">
+            {isAdmin && cardBYes && (
+              student.sentToMasarAt ? (
+                <span className="rounded-full bg-green-100 px-3 py-1.5 text-sm font-medium text-green-700">
+                  Sent to Masar · {fmtKuwait(student.sentToMasarAt)}
+                </span>
+              ) : (
+                <button
+                  onClick={() =>
+                    update(student.id, {
+                      sentToMasarAt: new Date().toISOString(),
+                    })
+                  }
+                  className="rounded-lg bg-blue-800 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-900"
+                >
+                  Send to Masar
+                </button>
+              )
+            )}
+            {!editing && (
+              <button
+                onClick={startEdit}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Edit
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Details (view mode) */}
