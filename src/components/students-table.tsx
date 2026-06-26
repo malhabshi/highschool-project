@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useStudents, duplicatesOf } from "@/lib/students";
@@ -60,10 +60,19 @@ export function StudentsTable() {
   // Filter by gender ("any" | "M" | "F" | "N/A").
   const [genderFilter, setGenderFilter] = useState("any");
 
+  // Pagination.
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(1);
+
   // Filters keyed by question id (value "any" by default).
   const [filters, setFilters] = useState<Record<string, string>>({});
   const setFilter = (id: string, v: string) =>
     setFilters((prev) => ({ ...prev, [id]: v }));
+
+  // Back to page 1 whenever a filter changes.
+  useEffect(() => {
+    setPage(1);
+  }, [assignFilter, schoolFilter, genderFilter, filters]);
 
   // Keep this page separate from the My Students page: hide students that were
   // created over there.
@@ -113,6 +122,14 @@ export function StudentsTable() {
   const ordered = cardB
     ? [...students].sort((a, b) => rank(b) - rank(a))
     : students;
+
+  // Paginate the ordered list.
+  const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
+  const current = Math.min(page, totalPages);
+  const pageItems = ordered.slice(
+    (current - 1) * PAGE_SIZE,
+    current * PAGE_SIZE
+  );
 
   function toggleOne(id: string) {
     setSelected((prev) => {
@@ -321,7 +338,7 @@ export function StudentsTable() {
             </tr>
           </thead>
           <tbody>
-            {ordered.map((s) => {
+            {pageItems.map((s) => {
               const dups = duplicatesOf(all, s);
               const isDuplicate = dups.length > 0;
               const dupDetail = dups
@@ -452,6 +469,49 @@ export function StudentsTable() {
             })}
           </tbody>
         </table>
+        </div>
+      )}
+
+      {/* Pagination */}
+      {ordered.length > PAGE_SIZE && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-sm">
+          <span className="text-slate-500">
+            Showing {(current - 1) * PAGE_SIZE + 1}–
+            {Math.min(current * PAGE_SIZE, ordered.length)} of {ordered.length}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(1)}
+              disabled={current === 1}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+            >
+              « First
+            </button>
+            <button
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={current === 1}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+            >
+              ‹ Prev
+            </button>
+            <span className="px-1 text-slate-600">
+              Page {current} of {totalPages}
+            </span>
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={current === totalPages}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+            >
+              Next ›
+            </button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={current === totalPages}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+            >
+              Last »
+            </button>
+          </div>
         </div>
       )}
     </div>
