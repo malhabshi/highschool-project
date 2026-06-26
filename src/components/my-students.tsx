@@ -6,6 +6,23 @@ import { useRole } from "@/components/role-context";
 import { useStudents, type Student } from "@/lib/students";
 import { useUsers, nameOf } from "@/lib/users";
 
+// Format an ISO timestamp in Kuwait local time.
+function fmtKuwait(iso: string) {
+  return new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Asia/Kuwait",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// Oldest first, newest last.
+function byOldest(a: Student, b: Student) {
+  return (a.createdAt ?? "").localeCompare(b.createdAt ?? "");
+}
+
 // Shows the students assigned to the logged-in user, split into 3 pipeline
 // columns, and lets them add new ones.
 export function MyStudents() {
@@ -20,12 +37,16 @@ export function MyStudents() {
   const onPage = students.filter((s) => s.source === "my-students");
   const mine = onPage.filter((s) => s.assignedTo === user.id);
 
-  const none = mine.filter((s) => s.pipeline !== "yellow" && s.pipeline !== "blue");
-  const yellow = mine.filter((s) => s.pipeline === "yellow");
+  const none = mine
+    .filter((s) => s.pipeline !== "yellow" && s.pipeline !== "blue")
+    .sort(byOldest);
+  const yellow = mine.filter((s) => s.pipeline === "yellow").sort(byOldest);
 
   // Dark blue: an employee sees their own; the admin sees everyone's, so they
   // can review what each user moved into the dark-blue stage.
-  const blue = (isAdmin ? onPage : mine).filter((s) => s.pipeline === "blue");
+  const blue = (isAdmin ? onPage : mine)
+    .filter((s) => s.pipeline === "blue")
+    .sort(byOldest);
 
   // Setting a student's pipeline. Entering Dark blue marks it unseen so the
   // admin gets a "New" badge until they review it.
@@ -74,8 +95,14 @@ export function MyStudents() {
             students={blue}
             onSet={setPipeline}
             badgeFor={isAdmin ? (s) => nameOf(users, s.assignedTo) : undefined}
-            markSeen={
-              isAdmin ? (id) => update(id, { blueSeen: true }) : undefined
+            onSend={
+              isAdmin
+                ? (id) =>
+                    update(id, {
+                      blueSeen: true,
+                      sentToMasarAt: new Date().toISOString(),
+                    })
+                : undefined
             }
           />
           <Column
@@ -96,14 +123,14 @@ function Column({
   students,
   onSet,
   badgeFor,
-  markSeen,
+  onSend,
 }: {
   title: string;
   accent: string;
   students: Student[];
   onSet: (id: string, v: string) => void;
   badgeFor?: (s: Student) => string;
-  markSeen?: (id: string) => void;
+  onSend?: (id: string) => void;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
@@ -140,7 +167,7 @@ function Column({
                     {badgeFor(s)}
                   </span>
                 )}
-                {markSeen && !s.blueSeen && (
+                {onSend && !s.blueSeen && (
                   <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
                     New
                   </span>
@@ -150,18 +177,23 @@ function Column({
               {s.school && (
                 <div className="text-xs text-slate-500">{s.school}</div>
               )}
+              {s.sentToMasarAt && (
+                <div className="mt-1 text-xs font-medium text-green-700">
+                  Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
+                </div>
+              )}
               <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
                 <PipelinePicker
                   value={s.pipeline}
                   onChange={(v) => onSet(s.id, v)}
                 />
-                {markSeen && !s.blueSeen && (
+                {onSend && !s.sentToMasarAt && (
                   <button
                     type="button"
-                    onClick={() => markSeen(s.id)}
-                    className="rounded-md border border-slate-300 bg-white px-2 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-100"
+                    onClick={() => onSend(s.id)}
+                    className="rounded-md bg-blue-800 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
                   >
-                    Mark as seen
+                    Send to Masar
                   </button>
                 )}
               </div>

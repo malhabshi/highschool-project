@@ -18,6 +18,8 @@ export type Student = {
   pipeline?: string; // "yellow" | "blue"
   source?: string; // "my-students" for ones created on the My Students page
   blueSeen?: boolean; // admin has reviewed this dark-blue student
+  sentToMasarAt?: string | null; // ISO timestamp when admin sent it to Masar
+  createdAt?: string;
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -42,6 +44,8 @@ type Row = {
   pipeline: string | null;
   source: string | null;
   blue_seen: boolean | null;
+  sent_to_masar_at: string | null;
+  created_at: string | null;
 };
 
 function fromRow(r: Row): Student {
@@ -58,6 +62,8 @@ function fromRow(r: Row): Student {
     pipeline: r.pipeline ?? undefined,
     source: r.source ?? undefined,
     blueSeen: r.blue_seen ?? false,
+    sentToMasarAt: r.sent_to_masar_at ?? null,
+    createdAt: r.created_at ?? undefined,
   };
 }
 
@@ -76,6 +82,7 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
   if (patch.pipeline !== undefined) row.pipeline = patch.pipeline ?? null;
   if (patch.source !== undefined) row.source = patch.source ?? null;
   if (patch.blueSeen !== undefined) row.blue_seen = patch.blueSeen;
+  if (patch.sentToMasarAt !== undefined) row.sent_to_masar_at = patch.sentToMasarAt;
   return row;
 }
 
