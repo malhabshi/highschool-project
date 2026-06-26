@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { useRole } from "@/components/role-context";
 import { useUsers } from "@/lib/users";
+import { useUnreadCounts } from "@/lib/messages";
 import { Chat } from "@/components/chat";
 
 // Admin-only: pick an employee and chat with them.
 export function AdminMessages() {
   const { role } = useRole();
   const { users, loaded } = useUsers();
+  const { counts } = useUnreadCounts();
   const employees = users.filter((u) => u.role === "employee");
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -37,13 +39,18 @@ export function AdminMessages() {
               <button
                 key={e.id}
                 onClick={() => setSelected(e.id)}
-                className={`mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                className={`mb-1 flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                   selected === e.id
                     ? "bg-blue-600 text-white"
                     : "text-slate-700 hover:bg-slate-100"
                 }`}
               >
-                {e.name || e.email}
+                <span className="truncate">{e.name || e.email}</span>
+                {counts[e.id] > 0 && selected !== e.id && (
+                  <span className="ml-auto shrink-0 rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                    {counts[e.id]}
+                  </span>
+                )}
               </button>
             ))
           )}

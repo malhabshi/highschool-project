@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRole } from "@/components/role-context";
-import { useMessages } from "@/lib/messages";
+import { useMessages, markThreadRead } from "@/lib/messages";
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleString("en-GB", {
@@ -24,6 +24,11 @@ export function Chat({ employeeId }: { employeeId: string }) {
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
+
+  // Viewing this thread marks it read for me (clears the unread badge).
+  useEffect(() => {
+    if (loaded) markThreadRead(user.id, employeeId);
+  }, [loaded, employeeId, user.id, messages.length]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

@@ -4,14 +4,20 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navItems } from "@/lib/nav";
 import { useRole } from "@/components/role-context";
+import { useUnreadCounts } from "@/lib/messages";
 import { BrandLogo } from "@/components/brand-logo";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
   const { role } = useRole();
+  const { total: unread } = useUnreadCounts();
 
   // Only show menu items this role is allowed to see.
   const visibleItems = navItems.filter((item) => item.roles.includes(role));
+
+  // Where the unread-message badge lives: Messages for admin, Dashboard
+  // (which holds the chat box) for employees.
+  const badgeHref = role === "admin" ? "/messages" : "/dashboard";
 
   return (
     <aside className="flex h-full w-64 shrink-0 flex-col bg-slate-900 text-slate-100">
@@ -38,6 +44,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             >
               <span className="text-base">{item.icon}</span>
               {item.label}
+              {item.href === badgeHref && unread > 0 && (
+                <span className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  {unread}
+                </span>
+              )}
             </Link>
           );
         })}

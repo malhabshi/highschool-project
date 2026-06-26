@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uid } from "@/lib/uid";
+import { useRole } from "@/components/role-context";
 
 // A chat message inside one admin↔employee thread (keyed by employeeId).
 export type Message = {
@@ -93,4 +94,72 @@ export function useMessages(employeeId: string | null) {
   );
 
   return { messages, send, loaded };
+}
+
+// Mark a thread as read for the current user (records "now" as last read).
+export async function markThreadRead(userId: string, employeeId: string) {
+  await supabase
+    .from("message_reads")
+    .upsert(
+      { user_id: userId, employee_id: employeeId, last_read_at: new Date().toISOString() },
+      { onConflict: "user_id,employee_id" }
+    );
+}
+
+// Unread message counts for the current user.
+// Admin: a count per employee thread. Employee: their own thread only.
+export function useUnreadCounts() {
+  const { user, role } = useRole();
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  const refetch = useCallback(async () => {
+    // When each thread was last read by me.
+    const { data: reads } = await supabase
+      .from("message_reads")
+      .select("employee_id, last_read_at")
+      .eq("user_id", user.id);
+    const readMap = new Map(
+      (reads ?? []).map((r) => [r.employee_id as string, r.last_read_at as string])
+    );
+
+    // Messages not sent by me (limited to my own thread if I'm an employee).
+    let q = supabase
+      .from("messages")
+      .select("employee_id, created_at, sender_id")
+      .neq("sender_id", user.id);
+    if (role === "employee") q = q.eq("employee_id", user.id);
+    const { data: msgs } = await q;
+
+    const c: Record<string, number> = {};
+    for (const m of msgs ?? []) {
+      const last = readMap.get(m.employee_id as string);
+      if (!last || (m.created_at as string) > last) {
+        c[m.employee_id as string] = (c[m.employee_id as string] ?? 0) + 1;
+      }
+    }
+    setCounts(c);
+  }, [user.id, role]);
+
+  useEffect(() => {
+    refetch();
+    const channel = supabase
+      .channel(`unread-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
+        () => refetch()
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "message_reads" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+  return { counts, total };
 }
