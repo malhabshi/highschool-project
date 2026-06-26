@@ -4,8 +4,20 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useStudents, duplicatesOf } from "@/lib/students";
-import { useQuestions, scholarshipQuestionId } from "@/lib/questions";
+import { useQuestions } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
+
+// Format an ISO timestamp in Kuwait local time.
+function fmtKuwait(iso: string) {
+  return new Date(iso).toLocaleString("en-GB", {
+    timeZone: "Asia/Kuwait",
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 export function StudentsTable() {
   const { user, role } = useRole();
@@ -18,11 +30,14 @@ export function StudentsTable() {
     remove,
     removeMany,
     assignMany,
+    update,
   } = useStudents();
   const isAdmin = role === "admin";
 
   const { questions } = useQuestions();
-  const sid = scholarshipQuestionId(questions);
+  const cardB = questions[1]?.id; // the "B" question
+  const isCardBYes = (s: { answers?: Record<string, unknown> }) =>
+    !!cardB && s.answers?.[cardB] === true;
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
   const [adding, setAdding] = useState(false);
@@ -58,6 +73,13 @@ export function StudentsTable() {
     }
     return true;
   });
+
+  // Students who answered "Yes" to question B float to the top.
+  const ordered = cardB
+    ? [...students].sort(
+        (a, b) => (isCardBYes(b) ? 1 : 0) - (isCardBYes(a) ? 1 : 0)
+      )
+    : students;
 
   function toggleOne(id: string) {
     setSelected((prev) => {
@@ -236,7 +258,7 @@ export function StudentsTable() {
             </tr>
           </thead>
           <tbody>
-            {students.map((s) => {
+            {ordered.map((s) => {
               const isDuplicate = duplicatesOf(base, s).length > 0;
               return (
                 <tr
@@ -261,9 +283,9 @@ export function StudentsTable() {
                       >
                         {s.name}
                       </Link>
-                      {sid && s.answers?.[sid] === true && (
+                      {isCardBYes(s) && (
                         <span
-                          title="Wants a scholarship"
+                          title="Answered Yes to question B"
                           className="text-green-600"
                         >
                           ✓
@@ -285,7 +307,7 @@ export function StudentsTable() {
                     </td>
                   )}
                   <td className="px-5 py-3">
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap items-center gap-1">
                       {s.tag && (
                         <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
                           {s.tag}
@@ -301,9 +323,30 @@ export function StudentsTable() {
                           Deletion requested
                         </span>
                       )}
-                      {!s.tag && !isDuplicate && !s.deletionRequested && (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
+                      {isCardBYes(s) &&
+                        (s.sentToMasarAt ? (
+                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                            Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              update(s.id, {
+                                sentToMasarAt: new Date().toISOString(),
+                              })
+                            }
+                            className="rounded-md bg-blue-800 px-2 py-0.5 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
+                          >
+                            Send to Masar
+                          </button>
+                        ))}
+                      {!s.tag &&
+                        !isDuplicate &&
+                        !s.deletionRequested &&
+                        !isCardBYes(s) && (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
                     </div>
                   </td>
                   {isAdmin && (
