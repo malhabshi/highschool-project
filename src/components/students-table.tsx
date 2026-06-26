@@ -54,6 +54,9 @@ export function StudentsTable() {
   // Filter by assigned employee ("any" | employee id | "unassigned").
   const [assignFilter, setAssignFilter] = useState("any");
 
+  // Filter by school name ("any" | a school name).
+  const [schoolFilter, setSchoolFilter] = useState("any");
+
   // Filters keyed by question id (value "any" by default).
   const [filters, setFilters] = useState<Record<string, string>>({});
   const setFilter = (id: string, v: string) =>
@@ -68,7 +71,12 @@ export function StudentsTable() {
     ? base
     : base.filter((s) => s.assignedTo === user.id);
 
-  // Apply the assignment + question filters.
+  // Distinct school names available to this user.
+  const schools = Array.from(
+    new Set(roleList.map((s) => s.school).filter(Boolean))
+  ).sort();
+
+  // Apply the assignment + school + question filters.
   const students = roleList.filter((s) => {
     if (isAdmin && assignFilter !== "any") {
       if (assignFilter === "unassigned") {
@@ -77,6 +85,7 @@ export function StudentsTable() {
         return false;
       }
     }
+    if (schoolFilter !== "any" && s.school !== schoolFilter) return false;
     for (const q of questions) {
       const f = filters[q.id] ?? "any";
       if (f === "any") continue;
@@ -216,9 +225,8 @@ export function StudentsTable() {
         />
       )}
 
-      {/* Filters (assigned employee + the configurable questions) */}
-      {(questions.length > 0 || isAdmin) && (
-        <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 px-5 py-3">
+      {/* Filters (assigned employee + school + the configurable questions) */}
+      <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 px-5 py-3">
           <span className="text-xs font-medium uppercase text-slate-400">
             Filters
           </span>
@@ -234,6 +242,15 @@ export function StudentsTable() {
               ]}
             />
           )}
+          <FilterSelect
+            label="School"
+            value={schoolFilter}
+            onChange={setSchoolFilter}
+            options={[
+              { v: "any", l: "Any" },
+              ...schools.map((sc) => ({ v: sc, l: sc })),
+            ]}
+          />
           {questions.map((q) => (
             <FilterSelect
               key={q.id}
@@ -254,8 +271,7 @@ export function StudentsTable() {
               }
             />
           ))}
-        </div>
-      )}
+      </div>
 
       {students.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">
