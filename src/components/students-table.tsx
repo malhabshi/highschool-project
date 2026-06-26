@@ -268,7 +268,7 @@ export function StudentsTable() {
           </thead>
           <tbody>
             {ordered.map((s) => {
-              const isDuplicate = duplicatesOf(base, s).length > 0;
+              const isDuplicate = duplicatesOf(all, s).length > 0;
               return (
                 <tr
                   key={s.id}

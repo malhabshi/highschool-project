@@ -166,7 +166,14 @@ export function StudentProfile({ id }: { id: string }) {
                   >
                     {d.name}
                   </Link>{" "}
-                  — assigned to {nameOf(users, d.assignedTo)}
+                  — held by{" "}
+                  <span className="font-medium">
+                    {nameOf(users, d.assignedTo)}
+                  </span>
+                  , added by{" "}
+                  <span className="font-medium">
+                    {d.source === "my-students" ? "an employee" : "the admin"}
+                  </span>
                 </li>
               ))}
             </ul>
