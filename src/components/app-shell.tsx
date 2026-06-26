@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Sidebar } from "@/components/sidebar";
 import { UserMenu } from "@/components/user-menu";
 import { NotificationBell } from "@/components/notification-bell";
+import { NotificationSounds } from "@/components/notification-sounds";
 import { BrandLogo } from "@/components/brand-logo";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -11,6 +12,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
+      <NotificationSounds />
       {/* Mobile backdrop */}
       {menuOpen && (
         <div
