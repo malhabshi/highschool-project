@@ -307,9 +307,10 @@ export function StudentProfile({ id }: { id: string }) {
         )}
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          {questions.map((q) => (
+          {questions.map((q, i) => (
             <QuestionCard
               key={q.id}
+              letter={String.fromCharCode(65 + i)}
               question={q}
               value={student.answers?.[q.id]}
               onChange={(v) =>
@@ -346,17 +347,24 @@ export function StudentProfile({ id }: { id: string }) {
 }
 
 function QuestionCard({
+  letter,
   question,
   value,
   onChange,
 }: {
+  letter: string;
   question: Question;
   value: boolean | string[] | undefined;
   onChange: (v: boolean | string[]) => void;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-      <h2 className="font-semibold text-slate-800">{question.label}</h2>
+      <h2 className="flex items-start gap-2 font-semibold text-slate-800">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+          {letter}
+        </span>
+        <span>{question.label}</span>
+      </h2>
 
       {question.type === "yesno" ? (
         <div className="mt-3 flex gap-6">
