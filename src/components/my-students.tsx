@@ -8,7 +8,7 @@ import { useStudents } from "@/lib/students";
 // Shows the students assigned to the logged-in user, and lets them add new ones.
 export function MyStudents() {
   const { user } = useRole();
-  const { students, addStudent, loaded } = useStudents();
+  const { students, addStudent, update, loaded } = useStudents();
   const [adding, setAdding] = useState(false);
 
   const mine = students.filter((s) => s.assignedTo === user.id);
@@ -38,8 +38,6 @@ export function MyStudents() {
         />
       )}
 
-      {/* pipeline color is shown as a left bar on each row below */}
-
       {!loaded ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">Loading…</p>
       ) : mine.length === 0 ? (
@@ -48,12 +46,13 @@ export function MyStudents() {
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[420px] text-left text-sm">
+          <table className="w-full min-w-[480px] text-left text-sm">
             <thead className="text-xs uppercase text-slate-500">
               <tr className="border-b border-slate-100">
                 <th className="px-5 py-3 font-medium">Student</th>
                 <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">School</th>
+                <th className="px-5 py-3 font-medium">Pipeline</th>
               </tr>
             </thead>
             <tbody>
@@ -63,33 +62,62 @@ export function MyStudents() {
                   className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
                 >
                   <td className="px-5 py-3">
-                    <span className="flex items-center gap-2">
-                      <span
-                        title={s.pipeline ? `${s.pipeline} pipeline` : "no pipeline"}
-                        className={`inline-block h-3 w-3 shrink-0 rounded-full ${
-                          s.pipeline === "yellow"
-                            ? "bg-yellow-400"
-                            : s.pipeline === "blue"
-                              ? "bg-blue-500"
-                              : "bg-slate-200"
-                        }`}
-                      />
-                      <Link
-                        href={`/student/${s.id}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {s.name}
-                      </Link>
-                    </span>
+                    <Link
+                      href={`/student/${s.id}`}
+                      className="font-medium text-blue-600 hover:underline"
+                    >
+                      {s.name}
+                    </Link>
                   </td>
                   <td className="px-5 py-3 text-slate-600">{s.phone}</td>
                   <td className="px-5 py-3 text-slate-600">{s.school || "—"}</td>
+                  <td className="px-5 py-3">
+                    <PipelinePicker
+                      value={s.pipeline}
+                      onChange={(v) => update(s.id, { pipeline: v })}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+// Clickable yellow/blue buttons to set a student's pipeline color after creation.
+// Clicking the active color again clears it.
+function PipelinePicker({
+  value,
+  onChange,
+}: {
+  value?: string;
+  onChange: (v: string) => void;
+}) {
+  const options = [
+    { v: "yellow", label: "Yellow", dot: "bg-yellow-400", ring: "ring-yellow-400" },
+    { v: "blue", label: "Blue", dot: "bg-blue-500", ring: "ring-blue-500" },
+  ];
+  return (
+    <div className="flex items-center gap-2">
+      {options.map((opt) => {
+        const active = value === opt.v;
+        return (
+          <button
+            key={opt.v}
+            type="button"
+            title={opt.label}
+            onClick={() => onChange(active ? "" : opt.v)}
+            className={`h-5 w-5 rounded-full ${opt.dot} transition ${
+              active
+                ? `ring-2 ring-offset-1 ${opt.ring}`
+                : "opacity-40 hover:opacity-100"
+            }`}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -102,14 +130,12 @@ function AddMyStudentForm({
     name: string;
     phone: string;
     school: string;
-    pipeline: string;
   }) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [school, setSchool] = useState("");
-  const [pipeline, setPipeline] = useState("yellow");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -118,7 +144,7 @@ function AddMyStudentForm({
     if (!/^\d{8}$/.test(phone)) return setError("Phone must be exactly 8 digits.");
     setBusy(true);
     try {
-      await onAdd({ name: name.trim(), phone, school: school.trim(), pipeline });
+      await onAdd({ name: name.trim(), phone, school: school.trim() });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -166,32 +192,10 @@ function AddMyStudentForm({
         </label>
       </div>
 
-      {/* Pipeline color */}
-      <div>
-        <span className="mb-1 block text-sm font-medium text-slate-600">
-          Pipeline
-        </span>
-        <div className="flex gap-2">
-          {[
-            { v: "yellow", label: "Yellow", dot: "bg-yellow-400" },
-            { v: "blue", label: "Blue", dot: "bg-blue-500" },
-          ].map((opt) => (
-            <button
-              key={opt.v}
-              type="button"
-              onClick={() => setPipeline(opt.v)}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                pipeline === opt.v
-                  ? "border-blue-500 bg-blue-50 text-slate-800"
-                  : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <span className={`h-3 w-3 rounded-full ${opt.dot}`} />
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <p className="text-xs text-slate-500">
+        Tip: after the student is added, pick a Yellow or Blue pipeline from the
+        list.
+      </p>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
