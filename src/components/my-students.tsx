@@ -42,7 +42,7 @@ export function MyStudents() {
       {!loaded ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">Loading…</p>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4">
           <Column
             title="No pipeline yet"
             accent="bg-slate-300"
