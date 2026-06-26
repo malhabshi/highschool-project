@@ -96,6 +96,17 @@ export function useMessages(employeeId: string | null) {
   return { messages, send, loaded };
 }
 
+// The timestamp I last read this thread (null if never).
+export async function getLastRead(userId: string, employeeId: string) {
+  const { data } = await supabase
+    .from("message_reads")
+    .select("last_read_at")
+    .eq("user_id", userId)
+    .eq("employee_id", employeeId)
+    .maybeSingle();
+  return (data?.last_read_at as string) ?? null;
+}
+
 // Mark a thread as read for the current user (records "now" as last read).
 export async function markThreadRead(userId: string, employeeId: string) {
   await supabase

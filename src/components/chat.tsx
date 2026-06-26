@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { useRole } from "@/components/role-context";
-import { useMessages, markThreadRead } from "@/lib/messages";
+import {
+  useMessages,
+  markThreadRead,
+  getLastRead,
+} from "@/lib/messages";
 
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleString("en-GB", {
@@ -19,16 +23,47 @@ export function Chat({ employeeId }: { employeeId: string }) {
   const { user } = useRole();
   const { messages, send, loaded } = useMessages(employeeId);
   const [draft, setDraft] = useState("");
+  // The "last read" point captured when this thread was opened — used to draw
+  // the "N unread messages" divider. Frozen for the viewing session.
+  const [baseline, setBaseline] = useState<string | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
 
-  // Viewing this thread marks it read for me (clears the unread badge).
+  // On opening the thread: capture my last-read point, then mark it read.
   useEffect(() => {
-    if (loaded) markThreadRead(user.id, employeeId);
-  }, [loaded, employeeId, user.id, messages.length]);
+    let active = true;
+    (async () => {
+      const last = await getLastRead(user.id, employeeId);
+      if (!active) return;
+      setBaseline(last ?? "1970-01-01T00:00:00Z");
+      await markThreadRead(user.id, employeeId);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [employeeId, user.id]);
+
+  // Keep marking read as new messages arrive while I'm viewing.
+  useEffect(() => {
+    if (baseline !== null && loaded) markThreadRead(user.id, employeeId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages.length]);
+
+  // First incoming message newer than my last-read point, and how many.
+  const firstUnreadIdx =
+    baseline === null
+      ? -1
+      : messages.findIndex(
+          (m) => m.senderId !== user.id && m.createdAt > baseline
+        );
+  const unreadCount =
+    baseline === null
+      ? 0
+      : messages.filter((m) => m.senderId !== user.id && m.createdAt > baseline)
+          .length;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,11 +83,18 @@ export function Chat({ employeeId }: { employeeId: string }) {
             No messages yet. Say hello 👋
           </p>
         ) : (
-          messages.map((m) => {
+          messages.map((m, i) => {
             const mine = m.senderId === user.id;
             return (
+              <Fragment key={m.id}>
+                {i === firstUnreadIdx && unreadCount > 0 && (
+                  <div className="my-2 flex items-center gap-2 text-xs font-medium text-red-500">
+                    <div className="h-px flex-1 bg-red-200" />
+                    {unreadCount} unread message{unreadCount > 1 ? "s" : ""}
+                    <div className="h-px flex-1 bg-red-200" />
+                  </div>
+                )}
               <div
-                key={m.id}
                 className={`flex ${mine ? "justify-end" : "justify-start"}`}
               >
                 <div
@@ -72,6 +114,7 @@ export function Chat({ employeeId }: { employeeId: string }) {
                   </div>
                 </div>
               </div>
+              </Fragment>
             );
           })
         )}
