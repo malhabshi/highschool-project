@@ -17,6 +17,7 @@ export type Student = {
   answers?: Record<string, boolean | string[]>;
   pipeline?: string; // "yellow" | "blue"
   source?: string; // "my-students" for ones created on the My Students page
+  blueSeen?: boolean; // admin has reviewed this dark-blue student
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -40,6 +41,7 @@ type Row = {
   answers: Record<string, boolean | string[]> | null;
   pipeline: string | null;
   source: string | null;
+  blue_seen: boolean | null;
 };
 
 function fromRow(r: Row): Student {
@@ -55,6 +57,7 @@ function fromRow(r: Row): Student {
     answers: r.answers ?? {},
     pipeline: r.pipeline ?? undefined,
     source: r.source ?? undefined,
+    blueSeen: r.blue_seen ?? false,
   };
 }
 
@@ -72,6 +75,7 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
   if (patch.answers !== undefined) row.answers = patch.answers;
   if (patch.pipeline !== undefined) row.pipeline = patch.pipeline ?? null;
   if (patch.source !== undefined) row.source = patch.source ?? null;
+  if (patch.blueSeen !== undefined) row.blue_seen = patch.blueSeen;
   return row;
 }
 
