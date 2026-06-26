@@ -51,6 +51,9 @@ export function StudentsTable() {
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
+  // Filter by assigned employee ("any" | employee id | "unassigned").
+  const [assignFilter, setAssignFilter] = useState("any");
+
   // Filters keyed by question id (value "any" by default).
   const [filters, setFilters] = useState<Record<string, string>>({});
   const setFilter = (id: string, v: string) =>
@@ -65,8 +68,15 @@ export function StudentsTable() {
     ? base
     : base.filter((s) => s.assignedTo === user.id);
 
-  // Apply the question filters.
+  // Apply the assignment + question filters.
   const students = roleList.filter((s) => {
+    if (isAdmin && assignFilter !== "any") {
+      if (assignFilter === "unassigned") {
+        if (s.assignedTo) return false;
+      } else if (s.assignedTo !== assignFilter) {
+        return false;
+      }
+    }
     for (const q of questions) {
       const f = filters[q.id] ?? "any";
       if (f === "any") continue;
@@ -206,12 +216,24 @@ export function StudentsTable() {
         />
       )}
 
-      {/* Filters (generated from the configurable questions) */}
-      {questions.length > 0 && (
+      {/* Filters (assigned employee + the configurable questions) */}
+      {(questions.length > 0 || isAdmin) && (
         <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 px-5 py-3">
           <span className="text-xs font-medium uppercase text-slate-400">
             Filters
           </span>
+          {isAdmin && (
+            <FilterSelect
+              label="Employee"
+              value={assignFilter}
+              onChange={setAssignFilter}
+              options={[
+                { v: "any", l: "Any" },
+                { v: "unassigned", l: "Unassigned" },
+                ...employees.map((e) => ({ v: e.id, l: e.name })),
+              ]}
+            />
+          )}
           {questions.map((q) => (
             <FilterSelect
               key={q.id}
@@ -294,6 +316,13 @@ export function StudentsTable() {
                     </td>
                   )}
                   <td className="px-5 py-3">
+                    {s.tag && (
+                      <div className="mb-1">
+                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                          {s.tag}
+                        </span>
+                      </div>
+                    )}
                     <span className="flex items-center gap-1.5">
                       <Link
                         href={`/student/${s.id}`}
@@ -331,11 +360,6 @@ export function StudentsTable() {
                   )}
                   <td className="px-5 py-3">
                     <div className="flex flex-wrap items-center gap-1">
-                      {s.tag && (
-                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
-                          {s.tag}
-                        </span>
-                      )}
                       {isDuplicate && (
                         <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                           Duplicated profile
@@ -370,8 +394,7 @@ export function StudentsTable() {
                             Send to Masar
                           </button>
                         ))}
-                      {!s.tag &&
-                        !isDuplicate &&
+                      {!isDuplicate &&
                         !s.deletionRequested &&
                         !(isAdmin && isCardBYes(s)) && (
                           <span className="text-xs text-slate-400">—</span>
