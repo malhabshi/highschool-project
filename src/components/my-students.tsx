@@ -29,7 +29,8 @@ export function MyStudents() {
   const { user, role } = useRole();
   const isAdmin = role === "admin";
   const { users } = useUsers();
-  const { students, addStudent, update, loaded } = useStudents();
+  const { students, addStudent, update, requestDeletion, remove, loaded } =
+    useStudents();
   const [adding, setAdding] = useState(false);
 
   // Only students created here on the My Students page (kept separate from the
@@ -40,7 +41,18 @@ export function MyStudents() {
   const none = mine
     .filter((s) => s.pipeline !== "yellow" && s.pipeline !== "blue")
     .sort(byNewest);
-  const yellow = mine.filter((s) => s.pipeline === "yellow").sort(byNewest);
+
+  // Yellow: an employee sees their own. The admin sees their own plus any
+  // employee's yellow student that has a pending deletion request.
+  const yellow = (
+    isAdmin
+      ? onPage.filter(
+          (s) =>
+            s.pipeline === "yellow" &&
+            (s.assignedTo === user.id || s.deletionRequested)
+        )
+      : mine.filter((s) => s.pipeline === "yellow")
+  ).sort(byNewest);
 
   // Dark blue: an employee sees their own; the admin sees everyone's, so they
   // can review what each user moved into the dark-blue stage.
@@ -91,6 +103,8 @@ export function MyStudents() {
             all={students}
             users={users}
             isAdmin={isAdmin}
+            onRequestDelete={!isAdmin ? requestDeletion : undefined}
+            onDelete={isAdmin ? remove : undefined}
           />
           <Column
             title="Dark blue"
@@ -110,15 +124,20 @@ export function MyStudents() {
             all={students}
             users={users}
             isAdmin={isAdmin}
+            onRequestDelete={!isAdmin ? requestDeletion : undefined}
+            onDelete={isAdmin ? remove : undefined}
           />
           <Column
             title="Yellow"
             accent="bg-yellow-400"
             students={yellow}
             onSet={setPipeline}
+            badgeFor={isAdmin ? (s) => nameOf(users, s.assignedTo) : undefined}
             all={students}
             users={users}
             isAdmin={isAdmin}
+            onRequestDelete={!isAdmin ? requestDeletion : undefined}
+            onDelete={isAdmin ? remove : undefined}
           />
         </div>
       )}
@@ -136,6 +155,8 @@ function Column({
   all,
   users,
   isAdmin,
+  onRequestDelete,
+  onDelete,
 }: {
   title: string;
   accent: string;
@@ -146,6 +167,8 @@ function Column({
   all: Student[];
   users: User[];
   isAdmin: boolean;
+  onRequestDelete?: (id: string) => void;
+  onDelete?: (id: string) => void;
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-slate-50 shadow-sm">
@@ -189,6 +212,11 @@ function Column({
                     New
                   </span>
                 )}
+                {s.deletionRequested && (
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+                    Deletion requested
+                  </span>
+                )}
               </div>
               <div className="mt-1 text-xs text-slate-500">{s.phone}</div>
               {s.school && (
@@ -219,20 +247,45 @@ function Column({
                   Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
                 </div>
               )}
-              <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2">
                 <PipelinePicker
                   value={s.pipeline}
                   onChange={(v) => onSet(s.id, v)}
                 />
-                {onSend && !s.sentToMasarAt && (
-                  <button
-                    type="button"
-                    onClick={() => onSend(s.id)}
-                    className="rounded-md bg-blue-800 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
-                  >
-                    Send to Masar
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* Employee: request the admin to delete this student. */}
+                  {onRequestDelete && !s.deletionRequested && (
+                    <button
+                      type="button"
+                      onClick={() => onRequestDelete(s.id)}
+                      className="rounded-md border border-red-300 bg-white px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      Request delete
+                    </button>
+                  )}
+                  {/* Admin: delete the student outright. */}
+                  {onDelete && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (confirm(`Delete ${s.name}'s profile?`))
+                          onDelete(s.id);
+                      }}
+                      className="rounded-md border border-red-300 bg-white px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                    >
+                      Delete
+                    </button>
+                  )}
+                  {onSend && !s.sentToMasarAt && (
+                    <button
+                      type="button"
+                      onClick={() => onSend(s.id)}
+                      className="rounded-md bg-blue-800 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
+                    >
+                      Send to Masar
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             );
