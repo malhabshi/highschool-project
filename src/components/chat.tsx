@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useRole } from "@/components/role-context";
+import { useUsers, nameOf } from "@/lib/users";
 import {
   useMessages,
   markThreadRead,
@@ -18,9 +19,16 @@ function fmtTime(iso: string) {
   });
 }
 
-// One admin↔employee conversation, identified by the employee's id.
-export function Chat({ employeeId }: { employeeId: string }) {
+// One conversation thread, identified by the thread id.
+export function Chat({
+  employeeId,
+  showSenderNames = false,
+}: {
+  employeeId: string;
+  showSenderNames?: boolean;
+}) {
   const { user } = useRole();
+  const { users } = useUsers();
   const { messages, send, loaded } = useMessages(employeeId);
   const [draft, setDraft] = useState("");
   // The "last read" point captured when this thread was opened — used to draw
@@ -104,6 +112,11 @@ export function Chat({ employeeId }: { employeeId: string }) {
                       : "bg-slate-100 text-slate-800"
                   }`}
                 >
+                  {showSenderNames && !mine && (
+                    <div className="mb-0.5 text-[11px] font-semibold text-slate-500">
+                      {nameOf(users, m.senderId)}
+                    </div>
+                  )}
                   <div className="whitespace-pre-wrap break-words">{m.body}</div>
                   <div
                     className={`mt-0.5 text-[10px] ${

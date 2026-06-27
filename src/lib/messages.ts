@@ -5,6 +5,9 @@ import { supabase } from "@/lib/supabase";
 import { uid } from "@/lib/uid";
 import { useRole } from "@/components/role-context";
 
+// Sentinel thread id for the shared admin↔admin group channel (not a profile).
+export const ADMIN_THREAD = "00000000-0000-0000-0000-000000000000";
+
 // A chat message inside one admin↔employee thread (keyed by employeeId).
 export type Message = {
   id: string;
