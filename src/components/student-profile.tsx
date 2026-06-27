@@ -12,6 +12,7 @@ import {
   type QuestionType,
 } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
+import { telHref } from "@/lib/phone";
 
 // Format an ISO timestamp in Kuwait local time.
 function fmtKuwait(iso: string) {
@@ -198,7 +199,14 @@ export function StudentProfile({ id }: { id: string }) {
                   </span>
                 )}
             </h1>
-            <p className="text-sm text-slate-600">{student.phone}</p>
+            <p className="text-sm">
+              <a
+                href={telHref(student.phone)}
+                className="text-blue-600 hover:underline"
+              >
+                {student.phone}
+              </a>
+            </p>
             <p className="text-sm text-slate-500">
               Assigned to {nameOf(users, student.assignedTo)}
             </p>

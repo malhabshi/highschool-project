@@ -6,6 +6,7 @@ import { useRole } from "@/components/role-context";
 import { useStudents, duplicatesOf } from "@/lib/students";
 import { useQuestions } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
+import { telHref } from "@/lib/phone";
 
 // Format an ISO timestamp in Kuwait local time.
 function fmtKuwait(iso: string) {
@@ -445,7 +446,14 @@ export function StudentsTable() {
                       )}
                     </span>
                   </td>
-                  <td className="px-5 py-3 text-slate-600">{s.phone}</td>
+                  <td className="px-5 py-3">
+                    <a
+                      href={telHref(s.phone)}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {s.phone}
+                    </a>
+                  </td>
                   <td className="px-5 py-3 text-slate-600">
                     {s.school || "—"}
                   </td>

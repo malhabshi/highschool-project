@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useStudents, duplicatesOf, type Student } from "@/lib/students";
 import { useUsers, nameOf, type User } from "@/lib/users";
+import { telHref } from "@/lib/phone";
 
 // Format an ISO timestamp in Kuwait local time.
 function fmtKuwait(iso: string) {
@@ -218,7 +219,14 @@ function Column({
                   </span>
                 )}
               </div>
-              <div className="mt-1 text-xs text-slate-500">{s.phone}</div>
+              <div className="mt-1 text-xs">
+                <a
+                  href={telHref(s.phone)}
+                  className="text-blue-600 hover:underline"
+                >
+                  {s.phone}
+                </a>
+              </div>
               {s.school && (
                 <div className="text-xs text-slate-500">{s.school}</div>
               )}
