@@ -185,11 +185,11 @@ export function StudentProfile({ id }: { id: string }) {
         </div>
       )}
 
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-6">
-          <div>
-            <h1 className="flex items-center gap-2 text-2xl font-bold text-slate-800">
+        <div className="flex flex-col gap-3 border-b border-slate-100 pb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="flex items-center gap-2 break-words text-xl font-bold text-slate-800 sm:text-2xl">
               {student.name}
               {scholarshipQuestionId(questions) &&
                 student.answers?.[scholarshipQuestionId(questions)!] ===

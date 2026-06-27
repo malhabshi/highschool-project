@@ -206,7 +206,7 @@ export function StudentsTable() {
           {isAdmin ? "All Students" : "My Students"}
         </h2>
         {isAdmin && selected.size > 0 ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <select
               value={assignTarget}
               onChange={(e) => setAssignTarget(e.target.value)}
@@ -542,7 +542,7 @@ export function StudentsTable() {
             <button
               onClick={() => setPage(1)}
               disabled={current === 1}
-              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+              className="hidden rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:inline-flex"
             >
               « First
             </button>
@@ -566,7 +566,7 @@ export function StudentsTable() {
             <button
               onClick={() => setPage(totalPages)}
               disabled={current === totalPages}
-              className="rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300"
+              className="hidden rounded-md border border-slate-300 bg-white px-2 py-1 text-slate-600 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:text-slate-300 sm:inline-flex"
             >
               Last »
             </button>
