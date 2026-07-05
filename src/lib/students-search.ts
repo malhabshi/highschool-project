@@ -49,6 +49,7 @@ export function useStudentSearch(params: SearchParams) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const reqId = useRef(0);
+  const refetchRef = useRef<() => void>(() => {});
 
   const key = JSON.stringify(params);
 
@@ -73,10 +74,20 @@ export function useStudentSearch(params: SearchParams) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  // Re-fetch whenever the query (filters/search/page) changes.
   useEffect(() => {
     refetch();
-    // Live updates: refetch this page when students change (debounced so a bulk
-    // change fires one reload, not one per row).
+  }, [refetch]);
+
+  // Keep a ref to the latest refetch so the subscription (created once) always
+  // reloads the current page.
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+
+  // Live updates: reload the current page when students change (debounced so a
+  // bulk change fires one reload, not one per row). Subscribes once.
+  useEffect(() => {
     let t: ReturnType<typeof setTimeout> | null = null;
     const channel = supabase
       .channel(`students-search-${uid()}`)
@@ -85,7 +96,7 @@ export function useStudentSearch(params: SearchParams) {
         { event: "*", schema: "public", table: "students" },
         () => {
           if (t) clearTimeout(t);
-          t = setTimeout(() => refetch(), 400);
+          t = setTimeout(() => refetchRef.current(), 400);
         }
       )
       .subscribe();
@@ -93,7 +104,7 @@ export function useStudentSearch(params: SearchParams) {
       if (t) clearTimeout(t);
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, []);
 
   // All matching ids across every page (for "select all").
   const allMatchingIds = useCallback(async () => {
