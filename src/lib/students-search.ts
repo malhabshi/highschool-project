@@ -68,7 +68,7 @@ export function useStudentSearch(params: SearchParams) {
     const list = (data ?? []) as SearchRow[];
     setRows(list.map((r) => fromRow(r.data)));
     setDupIds(new Set(list.filter((r) => r.is_duplicate).map((r) => r.data.id)));
-    setTotal(list[0]?.total ?? 0);
+    setTotal(Number(list[0]?.total ?? 0));
     setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
