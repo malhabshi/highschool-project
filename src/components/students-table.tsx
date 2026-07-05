@@ -101,8 +101,7 @@ export function StudentsTable() {
     pageSize: PAGE_SIZE,
   };
 
-  const { rows, dupIds, total, loading, refetch, allMatchingIds } =
-    useStudentSearch(params);
+  const { rows, dupIds, total, loading, refetch } = useStudentSearch(params);
   const { schools, tags } = useStudentFacets(isAdmin, user.id);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -129,13 +128,17 @@ export function StudentsTable() {
     });
   }
 
-  async function toggleAll() {
-    if (total > 0 && selected.size >= total) {
-      setSelected(new Set());
-      return;
-    }
-    const ids = await allMatchingIds();
-    setSelected(new Set(ids));
+  // Select / deselect only the rows on the current page.
+  function toggleAll() {
+    const pageIds = rows.map((r) => r.id);
+    const allOnPage =
+      pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allOnPage) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
   }
 
   async function deleteSelected() {
@@ -167,7 +170,8 @@ export function StudentsTable() {
     }
   }
 
-  const allSelected = total > 0 && selected.size >= total;
+  const allSelected =
+    rows.length > 0 && rows.every((r) => selected.has(r.id));
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
