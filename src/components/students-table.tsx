@@ -1,9 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
-import { useStudents } from "@/lib/students";
+import {
+  useStudentSearch,
+  useStudentFacets,
+  useStudentMutations,
+  type SearchParams,
+} from "@/lib/students-search";
 import { useQuestions } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
 import { telHref } from "@/lib/phone";
@@ -20,152 +25,100 @@ function fmtKuwait(iso: string) {
   });
 }
 
+const PAGE_SIZE = 50;
+
 export function StudentsTable() {
   const { user, role } = useRole();
+  const isAdmin = role === "admin";
   const { users } = useUsers();
   const employees = users.filter((u) => u.role === "employee");
-  const {
-    students: all,
-    addStudent,
-    addStudentsBulk,
-    remove,
-    removeMany,
-    assignMany,
-    update,
-  } = useStudents();
-  const isAdmin = role === "admin";
-
   const { questions } = useQuestions();
-  const cardB = questions[1]?.id; // the "B" question
-  const cardD = questions[3]?.id; // the "D" question
-  const isCardBYes = (s: { answers?: Record<string, unknown> }) =>
-    !!cardB && s.answers?.[cardB] === true;
-  const isCardDYes = (s: { answers?: Record<string, unknown> }) =>
-    !!cardD && s.answers?.[cardD] === true;
-  // "Important" = answered Yes to both B and D, not yet sent (admin only).
-  const isImportant = (s: {
-    answers?: Record<string, unknown>;
-    sentToMasarAt?: string | null;
-  }) => isAdmin && !s.sentToMasarAt && isCardBYes(s) && isCardDYes(s);
+  const cardB = questions[1]?.id ?? null; // the "B" question
+  const cardD = questions[3]?.id ?? null; // the "D" question
+
+  const mutations = useStudentMutations();
+
+  // Filter state.
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState(""); // debounced
+  const [assignFilter, setAssignFilter] = useState("any");
+  const [schoolFilter, setSchoolFilter] = useState("any");
+  const [genderFilter, setGenderFilter] = useState("any");
+  const [listFilter, setListFilter] = useState("any");
+  const [filters, setFilters] = useState<Record<string, string>>({});
+  const setFilter = (id: string, v: string) =>
+    setFilters((prev) => ({ ...prev, [id]: v }));
+
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [assignTarget, setAssignTarget] = useState("");
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
 
-  // Filter by assigned employee ("any" | employee id | "unassigned").
-  const [assignFilter, setAssignFilter] = useState("any");
+  // Debounce the search box (don't hit the server on every keystroke).
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 300);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
-  // Filter by school name ("any" | a school name).
-  const [schoolFilter, setSchoolFilter] = useState("any");
-
-  // Filter by gender ("any" | "M" | "F" | "N/A").
-  const [genderFilter, setGenderFilter] = useState("any");
-
-  // Filter by list name ("any" | a list/tag name).
-  const [listFilter, setListFilter] = useState("any");
-
-  // Free-text search by name or phone number.
-  const [search, setSearch] = useState("");
-
-  // Pagination.
-  const PAGE_SIZE = 50;
-  const [page, setPage] = useState(1);
-
-  // Filters keyed by question id (value "any" by default).
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const setFilter = (id: string, v: string) =>
-    setFilters((prev) => ({ ...prev, [id]: v }));
-
-  // Back to page 1 whenever a filter or the search changes.
+  // Reset to page 1 when a filter/search changes.
   useEffect(() => {
     setPage(1);
   }, [assignFilter, schoolFilter, genderFilter, listFilter, search, filters]);
 
-  // Phone → students map across ALL students (both pools), built once, for
-  // O(1) duplicate lookups instead of scanning the whole list per row.
-  const phoneMap = useMemo(() => {
-    const m = new Map<string, typeof all>();
-    for (const s of all) {
-      const p = s.phone.trim();
-      if (!p) continue;
-      const arr = m.get(p);
-      if (arr) arr.push(s);
-      else m.set(p, [s]);
-    }
-    return m;
-  }, [all]);
+  // Translate the question filters into the yes/no + multi maps the server wants.
+  const yesno: Record<string, string> = {};
+  const multi: Record<string, string> = {};
+  for (const q of questions) {
+    const f = filters[q.id] ?? "any";
+    if (f === "any") continue;
+    if (q.type === "yesno") yesno[q.id] = f === "yes" ? "true" : "false";
+    else multi[q.id] = f;
+  }
 
-  // Keep this page separate from the My Students page: hide students that were
-  // created over there.
-  const base = all.filter((s) => s.source !== "my-students");
+  const params: SearchParams = {
+    search,
+    assignMode:
+      assignFilter === "any"
+        ? "any"
+        : assignFilter === "unassigned"
+          ? "unassigned"
+          : "employee",
+    assigned:
+      assignFilter !== "any" && assignFilter !== "unassigned"
+        ? assignFilter
+        : null,
+    school: schoolFilter === "any" ? null : schoolFilter,
+    gender: genderFilter === "any" ? null : genderFilter,
+    tag: listFilter === "any" ? null : listFilter,
+    yesno,
+    multi,
+    cardB,
+    cardD,
+    admin: isAdmin,
+    userId: user.id,
+    page,
+    pageSize: PAGE_SIZE,
+  };
 
-  // Admin sees every student; an employee sees only their assigned students.
-  const roleList = isAdmin
-    ? base
-    : base.filter((s) => s.assignedTo === user.id);
+  const { rows, dupIds, total, loading, refetch, allMatchingIds } =
+    useStudentSearch(params);
+  const { schools, tags } = useStudentFacets(isAdmin, user.id);
 
-  // Distinct school names available to this user.
-  const schools = Array.from(
-    new Set(roleList.map((s) => s.school).filter(Boolean))
-  ).sort();
-
-  // Distinct list names (tags) available to this user.
-  const lists = Array.from(
-    new Set(roleList.map((s) => s.tag).filter(Boolean))
-  ).sort() as string[];
-
-  // Search terms (name match is case-insensitive; phone match is digits-only).
-  const term = search.trim().toLowerCase();
-  const phoneQuery = search.replace(/\D/g, "");
-
-  // Apply the search + assignment + school + question filters.
-  const students = roleList.filter((s) => {
-    if (term) {
-      const nameMatch = s.name.toLowerCase().includes(term);
-      const phoneMatch = phoneQuery.length > 0 && s.phone.includes(phoneQuery);
-      if (!nameMatch && !phoneMatch) return false;
-    }
-    if (isAdmin && assignFilter !== "any") {
-      if (assignFilter === "unassigned") {
-        if (s.assignedTo) return false;
-      } else if (s.assignedTo !== assignFilter) {
-        return false;
-      }
-    }
-    if (schoolFilter !== "any" && s.school !== schoolFilter) return false;
-    if (genderFilter !== "any" && (s.gender ?? "N/A") !== genderFilter)
-      return false;
-    if (listFilter !== "any" && (s.tag ?? "") !== listFilter) return false;
-    for (const q of questions) {
-      const f = filters[q.id] ?? "any";
-      if (f === "any") continue;
-      const answer = s.answers?.[q.id];
-      if (q.type === "yesno") {
-        if (f === "yes" && answer !== true) return false;
-        if (f === "no" && answer !== false) return false;
-      } else {
-        const arr = Array.isArray(answer) ? answer : [];
-        if (!arr.includes(f)) return false;
-      }
-    }
-    return true;
-  });
-
-  // Ranking for ordering: Important (B & D) at the very top, then Yes-to-B,
-  // then everyone else.
-  const rank = (s: { answers?: Record<string, unknown> }) =>
-    isImportant(s) ? 2 : isCardBYes(s) ? 1 : 0;
-  const ordered = cardB
-    ? [...students].sort((a, b) => rank(b) - rank(a))
-    : students;
-
-  // Paginate the ordered list.
-  const totalPages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const current = Math.min(page, totalPages);
-  const pageItems = ordered.slice(
-    (current - 1) * PAGE_SIZE,
-    current * PAGE_SIZE
-  );
+
+  const isCardBYes = (s: { answers?: Record<string, unknown> }) =>
+    !!cardB && s.answers?.[cardB] === true;
+  const isImportant = (s: {
+    answers?: Record<string, unknown>;
+    sentToMasarAt?: string | null;
+  }) =>
+    isAdmin &&
+    !s.sentToMasarAt &&
+    isCardBYes(s) &&
+    !!cardD &&
+    s.answers?.[cardD] === true;
 
   function toggleOne(id: string) {
     setSelected((prev) => {
@@ -176,42 +129,45 @@ export function StudentsTable() {
     });
   }
 
-  function toggleAll() {
-    setSelected((prev) =>
-      prev.size === students.length
-        ? new Set()
-        : new Set(students.map((s) => s.id))
-    );
+  async function toggleAll() {
+    if (total > 0 && selected.size >= total) {
+      setSelected(new Set());
+      return;
+    }
+    const ids = await allMatchingIds();
+    setSelected(new Set(ids));
   }
 
-  function deleteSelected() {
+  async function deleteSelected() {
     const ids = [...selected];
     if (ids.length === 0) return;
     if (confirm(`Delete ${ids.length} selected profile(s)?`)) {
-      removeMany(ids);
+      await mutations.removeMany(ids);
       setSelected(new Set());
+      refetch();
     }
   }
 
-  function assignSelected() {
+  async function assignSelected() {
     const ids = [...selected];
     if (ids.length === 0 || !assignTarget) return;
-    assignMany(ids, assignTarget);
+    await mutations.assignMany(ids, assignTarget);
     setSelected(new Set());
     setAssignTarget("");
+    refetch();
   }
 
-  function unassignSelected() {
+  async function unassignSelected() {
     const ids = [...selected];
     if (ids.length === 0) return;
     if (confirm(`Unassign ${ids.length} selected profile(s)?`)) {
-      assignMany(ids, ""); // empty target = unassign
+      await mutations.assignMany(ids, "");
       setSelected(new Set());
+      refetch();
     }
   }
 
-  const allSelected =
-    students.length > 0 && selected.size === students.length;
+  const allSelected = total > 0 && selected.size >= total;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -255,9 +211,7 @@ export function StudentsTable() {
           </div>
         ) : (
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500">
-              {students.length} total
-            </span>
+            <span className="text-sm text-slate-500">{total} total</span>
             {isAdmin && (
               <>
                 <button
@@ -283,9 +237,10 @@ export function StudentsTable() {
         <AddStudentForm
           employees={employees}
           onCancel={() => setAdding(false)}
-          onAdd={(data) => {
-            addStudent(data);
+          onAdd={async (data) => {
+            await mutations.addStudent(data);
             setAdding(false);
+            refetch();
           }}
         />
       )}
@@ -294,265 +249,256 @@ export function StudentsTable() {
       {isAdmin && bulkOpen && (
         <BulkUploadPanel
           onCancel={() => setBulkOpen(false)}
-          onImport={(list) => addStudentsBulk(list)}
+          onImport={async (list) => {
+            await mutations.addStudentsBulk(list);
+            refetch();
+          }}
         />
       )}
 
-      {/* Filters (assigned employee + school + the configurable questions) */}
+      {/* Filters */}
       <div className="flex flex-wrap items-center gap-4 border-b border-slate-200 px-5 py-3">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="🔍 Search name or phone…"
-            className="min-w-[14rem] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
-          />
-          <span className="text-xs font-medium uppercase text-slate-400">
-            Filters
-          </span>
-          {isAdmin && (
-            <FilterSelect
-              label="Employee"
-              value={assignFilter}
-              onChange={setAssignFilter}
-              options={[
-                { v: "any", l: "Any" },
-                { v: "unassigned", l: "Unassigned" },
-                ...employees.map((e) => ({ v: e.id, l: e.name })),
-              ]}
-            />
-          )}
+        <input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="🔍 Search name or phone…"
+          className="min-w-[14rem] flex-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+        />
+        <span className="text-xs font-medium uppercase text-slate-400">
+          Filters
+        </span>
+        {isAdmin && (
           <FilterSelect
-            label="School"
-            value={schoolFilter}
-            onChange={setSchoolFilter}
+            label="Employee"
+            value={assignFilter}
+            onChange={setAssignFilter}
             options={[
               { v: "any", l: "Any" },
-              ...schools.map((sc) => ({ v: sc, l: sc })),
+              { v: "unassigned", l: "Unassigned" },
+              ...employees.map((e) => ({ v: e.id, l: e.name })),
             ]}
           />
+        )}
+        <FilterSelect
+          label="School"
+          value={schoolFilter}
+          onChange={setSchoolFilter}
+          options={[
+            { v: "any", l: "Any" },
+            ...schools.map((sc) => ({ v: sc, l: sc })),
+          ]}
+        />
+        <FilterSelect
+          label="Gender"
+          value={genderFilter}
+          onChange={setGenderFilter}
+          options={[
+            { v: "any", l: "Any" },
+            { v: "M", l: "M" },
+            { v: "F", l: "F" },
+            { v: "N/A", l: "N/A" },
+          ]}
+        />
+        <FilterSelect
+          label="List name"
+          value={listFilter}
+          onChange={setListFilter}
+          options={[
+            { v: "any", l: "Any" },
+            ...tags.map((t) => ({ v: t, l: t })),
+          ]}
+        />
+        {questions.map((q) => (
           <FilterSelect
-            label="Gender"
-            value={genderFilter}
-            onChange={setGenderFilter}
-            options={[
-              { v: "any", l: "Any" },
-              { v: "M", l: "M" },
-              { v: "F", l: "F" },
-              { v: "N/A", l: "N/A" },
-            ]}
+            key={q.id}
+            label={q.label}
+            value={filters[q.id] ?? "any"}
+            onChange={(v) => setFilter(q.id, v)}
+            options={
+              q.type === "yesno"
+                ? [
+                    { v: "any", l: "Any" },
+                    { v: "yes", l: "Yes" },
+                    { v: "no", l: "No" },
+                  ]
+                : [
+                    { v: "any", l: "Any" },
+                    ...(q.options ?? []).map((o) => ({ v: o, l: o })),
+                  ]
+            }
           />
-          <FilterSelect
-            label="List name"
-            value={listFilter}
-            onChange={setListFilter}
-            options={[
-              { v: "any", l: "Any" },
-              ...lists.map((t) => ({ v: t, l: t })),
-            ]}
-          />
-          {questions.map((q) => (
-            <FilterSelect
-              key={q.id}
-              label={q.label}
-              value={filters[q.id] ?? "any"}
-              onChange={(v) => setFilter(q.id, v)}
-              options={
-                q.type === "yesno"
-                  ? [
-                      { v: "any", l: "Any" },
-                      { v: "yes", l: "Yes" },
-                      { v: "no", l: "No" },
-                    ]
-                  : [
-                      { v: "any", l: "Any" },
-                      ...(q.options ?? []).map((o) => ({ v: o, l: o })),
-                    ]
-              }
-            />
-          ))}
+        ))}
       </div>
 
-      {students.length === 0 ? (
+      {loading && rows.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-slate-500">Loading…</p>
+      ) : rows.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">
           No students match.
         </p>
       ) : (
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[480px] text-left text-sm">
-          <thead className="text-xs uppercase text-slate-500">
-            <tr className="border-b border-slate-100">
-              {isAdmin && (
-                <th className="px-5 py-3">
-                  <input
-                    type="checkbox"
-                    checked={allSelected}
-                    onChange={toggleAll}
-                    aria-label="Select all"
-                  />
-                </th>
-              )}
-              <th className="px-5 py-3 font-medium">Student</th>
-              <th className="px-5 py-3 font-medium">Phone</th>
-              <th className="px-5 py-3 font-medium">School</th>
-              {isAdmin && (
-                <th className="px-5 py-3 font-medium">Assigned To</th>
-              )}
-              <th className="px-5 py-3 font-medium">Status</th>
-              {isAdmin && (
-                <th className="px-5 py-3 text-right font-medium">Actions</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {pageItems.map((s) => {
-              const dups = (phoneMap.get(s.phone.trim()) ?? []).filter(
-                (d) => d.id !== s.id
-              );
-              const isDuplicate = dups.length > 0;
-              const dupDetail = dups
-                .map(
-                  (d) =>
-                    `${nameOf(users, d.assignedTo)} (${
-                      d.source === "my-students" ? "employee" : "admin"
-                    })`
-                )
-                .join(", ");
-              return (
-                <tr
-                  key={s.id}
-                  className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                >
-                  {isAdmin && (
-                    <td className="px-5 py-3">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(s.id)}
-                        onChange={() => toggleOne(s.id)}
-                        aria-label={`Select ${s.name}`}
-                      />
-                    </td>
-                  )}
-                  <td className="px-5 py-3">
-                    {s.tag && (
-                      <div className="mb-1">
-                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
-                          {s.tag}
-                        </span>
-                      </div>
+          <table className="w-full min-w-[480px] text-left text-sm">
+            <thead className="text-xs uppercase text-slate-500">
+              <tr className="border-b border-slate-100">
+                {isAdmin && (
+                  <th className="px-5 py-3">
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={toggleAll}
+                      aria-label="Select all"
+                    />
+                  </th>
+                )}
+                <th className="px-5 py-3 font-medium">Student</th>
+                <th className="px-5 py-3 font-medium">Phone</th>
+                <th className="px-5 py-3 font-medium">School</th>
+                {isAdmin && (
+                  <th className="px-5 py-3 font-medium">Assigned To</th>
+                )}
+                <th className="px-5 py-3 font-medium">Status</th>
+                {isAdmin && (
+                  <th className="px-5 py-3 text-right font-medium">Actions</th>
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((s) => {
+                const isDuplicate = dupIds.has(s.id);
+                return (
+                  <tr
+                    key={s.id}
+                    className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
+                  >
+                    {isAdmin && (
+                      <td className="px-5 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(s.id)}
+                          onChange={() => toggleOne(s.id)}
+                          aria-label={`Select ${s.name}`}
+                        />
+                      </td>
                     )}
-                    <span className="flex items-center gap-1.5">
-                      <Link
-                        href={`/student/${s.id}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {s.name}
-                      </Link>
-                      {isCardBYes(s) && (
-                        <span
-                          title="Answered Yes to question B"
-                          className="text-green-600"
-                        >
-                          ✓
-                        </span>
-                      )}
-                      {isImportant(s) && (
-                        <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
-                          Important
-                        </span>
-                      )}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3">
-                    <a
-                      href={telHref(s.phone)}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {s.phone}
-                    </a>
-                  </td>
-                  <td className="px-5 py-3 text-slate-600">
-                    {s.school || "—"}
-                  </td>
-                  {isAdmin && (
-                    <td className="px-5 py-3 text-slate-600">
-                      {s.assignedTo ? (
-                        nameOf(users, s.assignedTo)
-                      ) : (
-                        <span className="text-amber-600">Unassigned</span>
-                      )}
-                    </td>
-                  )}
-                  <td className="px-5 py-3">
-                    <div className="flex flex-wrap items-center gap-1">
-                      {isDuplicate && (
-                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
-                          Duplicated profile
-                        </span>
-                      )}
-                      {isAdmin && isDuplicate && (
-                        <span className="basis-full text-[11px] text-amber-700">
-                          Also held by {dupDetail}
-                        </span>
-                      )}
-                      {s.deletionRequested && (
-                        <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
-                          Deletion requested
-                        </span>
-                      )}
-                      {isAdmin &&
-                        isCardBYes(s) &&
-                        (s.sentToMasarAt ? (
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                            Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
+                    <td className="px-5 py-3">
+                      {s.tag && (
+                        <div className="mb-1">
+                          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                            {s.tag}
                           </span>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              update(s.id, {
-                                sentToMasarAt: new Date().toISOString(),
-                              })
-                            }
-                            className="rounded-md bg-blue-800 px-2 py-0.5 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
+                        </div>
+                      )}
+                      <span className="flex items-center gap-1.5">
+                        <Link
+                          href={`/student/${s.id}`}
+                          className="font-medium text-blue-600 hover:underline"
+                        >
+                          {s.name}
+                        </Link>
+                        {isCardBYes(s) && (
+                          <span
+                            title="Answered Yes to question B"
+                            className="text-green-600"
                           >
-                            Send to Masar
-                          </button>
-                        ))}
-                      {!isDuplicate &&
-                        !s.deletionRequested &&
-                        !(isAdmin && isCardBYes(s)) && (
-                          <span className="text-xs text-slate-400">—</span>
+                            ✓
+                          </span>
                         )}
-                    </div>
-                  </td>
-                  {isAdmin && (
-                    <td className="px-5 py-3 text-right">
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete ${s.name}'s profile?`)) {
-                            remove(s.id);
-                          }
-                        }}
-                        className="rounded-md border border-red-300 bg-white px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white"
-                      >
-                        Delete
-                      </button>
+                        {isImportant(s) && (
+                          <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                            Important
+                          </span>
+                        )}
+                      </span>
                     </td>
-                  )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    <td className="px-5 py-3">
+                      <a
+                        href={telHref(s.phone)}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {s.phone}
+                      </a>
+                    </td>
+                    <td className="px-5 py-3 text-slate-600">
+                      {s.school || "—"}
+                    </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3 text-slate-600">
+                        {s.assignedTo ? (
+                          nameOf(users, s.assignedTo)
+                        ) : (
+                          <span className="text-amber-600">Unassigned</span>
+                        )}
+                      </td>
+                    )}
+                    <td className="px-5 py-3">
+                      <div className="flex flex-wrap items-center gap-1">
+                        {isDuplicate && (
+                          <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                            Duplicated profile
+                          </span>
+                        )}
+                        {s.deletionRequested && (
+                          <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">
+                            Deletion requested
+                          </span>
+                        )}
+                        {isAdmin &&
+                          isCardBYes(s) &&
+                          (s.sentToMasarAt ? (
+                            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                              Sent to Masar · {fmtKuwait(s.sentToMasarAt)}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                await mutations.update(s.id, {
+                                  sent_to_masar_at: new Date().toISOString(),
+                                });
+                                refetch();
+                              }}
+                              className="rounded-md bg-blue-800 px-2 py-0.5 text-xs font-semibold text-white transition-colors hover:bg-blue-900"
+                            >
+                              Send to Masar
+                            </button>
+                          ))}
+                        {!isDuplicate &&
+                          !s.deletionRequested &&
+                          !(isAdmin && isCardBYes(s)) && (
+                            <span className="text-xs text-slate-400">—</span>
+                          )}
+                      </div>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-5 py-3 text-right">
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Delete ${s.name}'s profile?`)) {
+                              await mutations.remove(s.id);
+                              refetch();
+                            }
+                          }}
+                          className="rounded-md border border-red-300 bg-white px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
       {/* Pagination */}
-      {ordered.length > PAGE_SIZE && (
+      {total > PAGE_SIZE && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-5 py-3 text-sm">
           <span className="text-slate-500">
             Showing {(current - 1) * PAGE_SIZE + 1}–
-            {Math.min(current * PAGE_SIZE, ordered.length)} of {ordered.length}
+            {Math.min(current * PAGE_SIZE, total)} of {total}
           </span>
           <div className="flex items-center gap-2">
             <button
@@ -742,13 +688,14 @@ function BulkUploadPanel({
         <span className="font-medium">
           Name, Phone, School, Gender, Student Number
         </span>
-        ), then upload it. <span className="font-medium">Only Phone is
-        required</span> — everything else is optional. Numbers with the Kuwait
-        country code (965…) are accepted and trimmed automatically. Rows with no
-        name show the phone number as the name.
-        Uploaded students come in <span className="font-medium">unassigned</span>
-        {" "}— select them in the list and use{" "}
-        <span className="font-medium">Assign</span> to give them to an employee.
+        ), then upload it.{" "}
+        <span className="font-medium">Only Phone is required</span> — everything
+        else is optional. Numbers with the Kuwait country code (965…) are
+        accepted and trimmed automatically. Rows with no name show the phone
+        number as the name. Uploaded students come in{" "}
+        <span className="font-medium">unassigned</span> — select them in the list
+        and use <span className="font-medium">Assign</span> to give them to an
+        employee.
       </p>
       <label className="block max-w-xs">
         <span className="mb-1 block text-sm font-medium text-slate-600">

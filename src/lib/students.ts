@@ -33,7 +33,7 @@ export function duplicatesOf(students: Student[], student: Student) {
   );
 }
 
-type Row = {
+export type Row = {
   id: string;
   name: string;
   phone: string;
@@ -52,7 +52,7 @@ type Row = {
   student_number: string | null;
 };
 
-function fromRow(r: Row): Student {
+export function fromRow(r: Row): Student {
   return {
     id: r.id,
     name: r.name,
