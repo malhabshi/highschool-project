@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
-import { useStudents, duplicatesOf } from "@/lib/students";
+import { useStudents } from "@/lib/students";
 import { useQuestions } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
 import { telHref } from "@/lib/phone";
@@ -80,6 +80,20 @@ export function StudentsTable() {
   useEffect(() => {
     setPage(1);
   }, [assignFilter, schoolFilter, genderFilter, listFilter, search, filters]);
+
+  // Phone → students map across ALL students (both pools), built once, for
+  // O(1) duplicate lookups instead of scanning the whole list per row.
+  const phoneMap = useMemo(() => {
+    const m = new Map<string, typeof all>();
+    for (const s of all) {
+      const p = s.phone.trim();
+      if (!p) continue;
+      const arr = m.get(p);
+      if (arr) arr.push(s);
+      else m.set(p, [s]);
+    }
+    return m;
+  }, [all]);
 
   // Keep this page separate from the My Students page: hide students that were
   // created over there.
@@ -391,7 +405,9 @@ export function StudentsTable() {
           </thead>
           <tbody>
             {pageItems.map((s) => {
-              const dups = duplicatesOf(all, s);
+              const dups = (phoneMap.get(s.phone.trim()) ?? []).filter(
+                (d) => d.id !== s.id
+              );
               const isDuplicate = dups.length > 0;
               const dupDetail = dups
                 .map(

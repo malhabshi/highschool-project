@@ -101,10 +101,12 @@ export function useStudents() {
   const [loaded, setLoaded] = useState(false);
 
   const refetch = useCallback(async () => {
-    // Supabase returns at most 1000 rows per request, so page through them all.
+    // Supabase returns at most 1000 rows per request. Page through them, but
+    // render each page as it arrives so the UI is usable after the first batch
+    // instead of waiting for the whole table.
     const pageSize = 1000;
     let from = 0;
-    const all: Row[] = [];
+    const acc: Student[] = [];
     for (;;) {
       const { data, error } = await supabase
         .from("students")
@@ -112,11 +114,12 @@ export function useStudents() {
         .order("created_at", { ascending: true })
         .range(from, from + pageSize - 1);
       if (error || !data || data.length === 0) break;
-      all.push(...(data as Row[]));
+      acc.push(...data.map((r) => fromRow(r as Row)));
+      setStudents([...acc]); // show progress immediately
+      setLoaded(true);
       if (data.length < pageSize) break;
       from += pageSize;
     }
-    setStudents(all.map((r) => fromRow(r)));
     setLoaded(true);
   }, []);
 
