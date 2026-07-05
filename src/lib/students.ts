@@ -267,3 +267,99 @@ export function useStudents() {
     loaded,
   };
 }
+
+// Lightweight hook for the My Students page: loads ONLY the "my-students" pool
+// (a small set) instead of the whole students table.
+export function useMyStudentsData() {
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const reqId = useRef(0);
+
+  const refetch = useCallback(async () => {
+    const my = ++reqId.current;
+    const { data } = await supabase
+      .from("students")
+      .select("*")
+      .eq("source", "my-students")
+      .order("created_at", { ascending: true });
+    if (my !== reqId.current) return;
+    setStudents((data ?? []).map((r) => fromRow(r as Row)));
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    refetch();
+    const channel = supabase
+      .channel(`my-students-${uid()}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "students",
+          filter: "source=eq.my-students",
+        },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  const addStudent = useCallback(
+    async (data: {
+      name: string;
+      phone: string;
+      school?: string;
+      assignedTo: string;
+      gender?: string;
+    }) => {
+      reqId.current++;
+      const { data: rows, error } = await supabase
+        .from("students")
+        .insert({
+          name: data.name,
+          phone: data.phone,
+          school: data.school ?? "",
+          assigned_to: data.assignedTo || null,
+          gender: data.gender ?? "N/A",
+          source: "my-students",
+        })
+        .select();
+      if (error) throw new Error(error.message);
+      if (rows?.[0]) setStudents((prev) => [...prev, fromRow(rows[0] as Row)]);
+    },
+    []
+  );
+
+  const update = useCallback(
+    async (id: string, patch: Partial<Omit<Student, "id">>) => {
+      reqId.current++;
+      setStudents((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, ...patch } : s))
+      );
+      await supabase.from("students").update(toRow(patch)).eq("id", id);
+    },
+    []
+  );
+
+  const requestDeletion = useCallback(async (id: string) => {
+    reqId.current++;
+    setStudents((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, deletionRequested: true } : s))
+    );
+    await supabase
+      .from("students")
+      .update({ deletion_requested: true })
+      .eq("id", id);
+  }, []);
+
+  const remove = useCallback(async (id: string) => {
+    reqId.current++;
+    setStudents((prev) => prev.filter((s) => s.id !== id));
+    await supabase.from("students").delete().eq("id", id);
+  }, []);
+
+  return { students, addStudent, update, requestDeletion, remove, loaded };
+}

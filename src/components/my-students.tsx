@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
-import { useStudents, duplicatesOf, type Student } from "@/lib/students";
+import { useMyStudentsData, duplicatesOf, type Student } from "@/lib/students";
 import { useUsers, nameOf, type User } from "@/lib/users";
 import { telHref } from "@/lib/phone";
 
@@ -31,7 +31,7 @@ export function MyStudents() {
   const isAdmin = role === "admin";
   const { users } = useUsers();
   const { students, addStudent, update, requestDeletion, remove, loaded } =
-    useStudents();
+    useMyStudentsData();
   const [adding, setAdding] = useState(false);
 
   // Only students created here on the My Students page (kept separate from the
@@ -85,7 +85,6 @@ export function MyStudents() {
             await addStudent({
               ...data,
               assignedTo: user.id,
-              source: "my-students",
             });
             setAdding(false);
           }}
