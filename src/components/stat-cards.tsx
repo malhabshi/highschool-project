@@ -1,26 +1,62 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { useRole } from "@/components/role-context";
-import { useStudents } from "@/lib/students";
-import { useUsers } from "@/lib/users";
+import { uid } from "@/lib/uid";
 import type { Role } from "@/lib/nav";
 
+// Uses lightweight COUNT queries (no row payloads) so the dashboard loads fast.
 export function StatCards() {
   const { user, role } = useRole();
   const isAdmin = role === "admin";
-  const { students } = useStudents();
-  const { users } = useUsers();
+  const [totalStudents, setTotalStudents] = useState<number | null>(null);
+  const [sentToMasar, setSentToMasar] = useState<number | null>(null);
+  const [staffUsers, setStaffUsers] = useState<number | null>(null);
 
-  // Admin sees everyone; an employee sees only their own students.
-  const mine = isAdmin
-    ? students
-    : students.filter((s) => s.assignedTo === user.id);
+  const refetch = useCallback(async () => {
+    let totalQ = supabase
+      .from("students")
+      .select("*", { count: "exact", head: true });
+    let sentQ = supabase
+      .from("students")
+      .select("*", { count: "exact", head: true })
+      .not("sent_to_masar_at", "is", null);
+    if (!isAdmin) {
+      totalQ = totalQ.eq("assigned_to", user.id);
+      sentQ = sentQ.eq("assigned_to", user.id);
+    }
 
-  const totalStudents = mine.length;
-  const sentToMasar = mine.filter((s) => s.sentToMasarAt).length;
-  const staffUsers = users.filter((u) => u.role === "employee").length;
+    const [total, sent, staff] = await Promise.all([
+      totalQ,
+      sentQ,
+      supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true })
+        .eq("role", "employee"),
+    ]);
 
-  const stats: { label: string; value: number; icon: string; roles: Role[] }[] =
+    setTotalStudents(total.count ?? 0);
+    setSentToMasar(sent.count ?? 0);
+    setStaffUsers(staff.count ?? 0);
+  }, [isAdmin, user.id]);
+
+  useEffect(() => {
+    refetch();
+    const channel = supabase
+      .channel(`stats-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "students" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  const stats: { label: string; value: number | null; icon: string; roles: Role[] }[] =
     [
       {
         label: "Total Students",
@@ -49,7 +85,9 @@ export function StatCards() {
           <div className="flex items-center justify-between">
             <span className="text-2xl">{s.icon}</span>
           </div>
-          <p className="mt-3 text-3xl font-bold text-slate-800">{s.value}</p>
+          <p className="mt-3 text-3xl font-bold text-slate-800">
+            {s.value === null ? "…" : s.value}
+          </p>
           <p className="text-sm text-slate-500">{s.label}</p>
         </div>
       ))}

@@ -1,29 +1,64 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { supabase } from "@/lib/supabase";
 import { useRole } from "@/components/role-context";
-import { useStudents } from "@/lib/students";
 import { useQuestions, scholarshipQuestionId } from "@/lib/questions";
 import { useUsers, nameOf } from "@/lib/users";
+import { uid } from "@/lib/uid";
+
+type Pending = { id: string; name: string; assigned_to: string | null };
 
 // Admin notifications: pending deletion requests + scholarship interest.
+// Uses targeted queries (not the whole students table) so it loads fast.
 export function NotificationBell() {
   const { role } = useRole();
-  const { students } = useStudents();
   const { questions } = useQuestions();
   const { users } = useUsers();
   const [open, setOpen] = useState(false);
+  const [deletionRequests, setDeletionRequests] = useState<Pending[]>([]);
+  const [scholarshipCount, setScholarshipCount] = useState(0);
 
-  if (role !== "admin") return null;
-
-  const deletionRequests = students.filter((s) => s.deletionRequested);
   const sid = scholarshipQuestionId(questions);
-  const scholarshipCount = sid
-    ? students.filter((s) => s.answers?.[sid] === true).length
-    : 0;
+  const isAdmin = role === "admin";
 
-  // Badge = the actionable new items (deletion requests).
+  const refetch = useCallback(async () => {
+    if (!isAdmin) return;
+    const [pending, scholarship] = await Promise.all([
+      supabase
+        .from("students")
+        .select("id, name, assigned_to")
+        .eq("deletion_requested", true),
+      sid
+        ? supabase
+            .from("students")
+            .select("*", { count: "exact", head: true })
+            .eq(`answers->>${sid}`, "true")
+        : Promise.resolve({ count: 0 }),
+    ]);
+    setDeletionRequests((pending.data as Pending[]) ?? []);
+    setScholarshipCount(("count" in scholarship && scholarship.count) || 0);
+  }, [isAdmin, sid]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    refetch();
+    const channel = supabase
+      .channel(`bell-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "students" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, refetch]);
+
+  if (!isAdmin) return null;
+
   const badge = deletionRequests.length;
 
   return (
@@ -74,7 +109,7 @@ export function NotificationBell() {
                           🗑️ <span className="font-medium">{s.name}</span>
                           <span className="text-slate-500">
                             {" "}
-                            — requested by {nameOf(users, s.assignedTo)}
+                            — requested by {nameOf(users, s.assigned_to ?? "")}
                           </span>
                         </Link>
                       ))}
@@ -87,8 +122,7 @@ export function NotificationBell() {
                       onClick={() => setOpen(false)}
                       className="block rounded-lg px-2 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-100"
                     >
-                      🎓{" "}
-                      <span className="font-medium">{scholarshipCount}</span>{" "}
+                      🎓 <span className="font-medium">{scholarshipCount}</span>{" "}
                       student(s) want a scholarship
                     </Link>
                   )}
