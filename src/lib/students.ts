@@ -101,40 +101,34 @@ export function useStudents() {
   const [loaded, setLoaded] = useState(false);
   // Guards against overlapping refetches: only the newest one may write state.
   const reqId = useRef(0);
-  // Whether we've completed at least one full load.
-  const firstDone = useRef(false);
 
   const refetch = useCallback(async () => {
     const my = ++reqId.current;
-    // Supabase returns at most 1000 rows per request, so page through them.
+    // Supabase caps a request at 1000 rows. Instead of paging sequentially,
+    // get the count and fetch every page in PARALLEL — total time ≈ one request
+    // rather than N. The list is then set once (no blink).
     const pageSize = 1000;
-    let from = 0;
-    const acc: Student[] = [];
-    // Stream partial pages ONLY on the very first load (fast first paint).
-    // On later refetches we set the full list once at the end, so already-shown
-    // students never blink out while a background reload is in progress.
-    const streaming = !firstDone.current;
-    for (;;) {
-      const { data, error } = await supabase
-        .from("students")
-        .select("*")
-        .order("created_at", { ascending: true })
-        .range(from, from + pageSize - 1);
-      // A newer refetch started — drop this stale one so it can't revert state.
-      if (my !== reqId.current) return;
-      if (error || !data || data.length === 0) break;
-      acc.push(...data.map((r) => fromRow(r as Row)));
-      if (streaming) {
-        setStudents([...acc]);
-        setLoaded(true);
-      }
-      if (data.length < pageSize) break;
-      from += pageSize;
-    }
+    const { count } = await supabase
+      .from("students")
+      .select("*", { count: "exact", head: true });
     if (my !== reqId.current) return;
-    setStudents(acc); // atomic final set (no blink on refetch)
+    const pages = Math.max(1, Math.ceil((count ?? 0) / pageSize));
+    const results = await Promise.all(
+      Array.from({ length: pages }, (_, i) =>
+        supabase
+          .from("students")
+          .select("*")
+          .order("created_at", { ascending: true })
+          .range(i * pageSize, i * pageSize + pageSize - 1)
+      )
+    );
+    if (my !== reqId.current) return;
+    const rows: Student[] = [];
+    for (const r of results) {
+      if (r.data) rows.push(...r.data.map((d) => fromRow(d as Row)));
+    }
+    setStudents(rows);
     setLoaded(true);
-    firstDone.current = true;
   }, []);
 
   useEffect(() => {
