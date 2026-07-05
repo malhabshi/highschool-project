@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/components/role-context";
-import { useStudents, duplicatesOf } from "@/lib/students";
+import { useStudentProfile } from "@/lib/students";
 import {
   useQuestions,
   scholarshipQuestionId,
@@ -29,12 +29,20 @@ function fmtKuwait(iso: string) {
 export function StudentProfile({ id }: { id: string }) {
   const router = useRouter();
   const { user, role } = useRole();
-  const { students, update, requestDeletion, remove, loaded } = useStudents();
+  const {
+    student,
+    duplicates,
+    prevId,
+    nextId,
+    update,
+    requestDeletion,
+    remove,
+    loaded,
+  } = useStudentProfile(id, role, user.id);
   const { questions, addQuestion, updateQuestion, removeQuestion } =
     useQuestions();
   const { users } = useUsers();
   const [managing, setManaging] = useState(false);
-  const student = students.find((s) => s.id === id);
 
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
@@ -111,18 +119,15 @@ export function StudentProfile({ id }: { id: string }) {
   function handleDelete() {
     if (!student) return;
     if (confirm(`Permanently delete ${student.name}'s profile?`)) {
-      remove(student.id);
+      remove();
       router.push("/students");
     }
   }
 
   function handleRequestDeletion() {
-    if (!student) return;
-    requestDeletion(student.id);
+    requestDeletion();
   }
 
-  // Duplicate detection by phone number.
-  const duplicates = duplicatesOf(students, student);
   const isAdmin = role === "admin";
 
   // "Send to Masar" is admin-only and applies to students who answered Yes to
@@ -130,24 +135,13 @@ export function StudentProfile({ id }: { id: string }) {
   const cardB = questions[1]?.id;
   const cardBYes = !!cardB && student.answers?.[cardB] === true;
 
-  // The list this user can navigate (admin: all; employee: their own),
-  // in the same order as the Students table.
-  const accessible =
-    role === "admin"
-      ? students
-      : students.filter((s) => s.assignedTo === user.id);
-  const idx = accessible.findIndex((s) => s.id === id);
-  const prev = idx > 0 ? accessible[idx - 1] : null;
-  const next =
-    idx >= 0 && idx < accessible.length - 1 ? accessible[idx + 1] : null;
-
   return (
     <div className="space-y-6">
       {/* Top navigation: prev / back / next */}
       <div className="flex items-center justify-between">
-        <ArrowButton href={prev ? `/student/${prev.id}` : null} dir="prev" />
+        <ArrowButton href={prevId ? `/student/${prevId}` : null} dir="prev" />
         {backLink}
-        <ArrowButton href={next ? `/student/${next.id}` : null} dir="next" />
+        <ArrowButton href={nextId ? `/student/${nextId}` : null} dir="next" />
       </div>
 
       {/* Duplicate-profile flag */}

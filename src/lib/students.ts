@@ -363,3 +363,105 @@ export function useMyStudentsData() {
 
   return { students, addStudent, update, requestDeletion, remove, loaded };
 }
+
+// Targeted data for a single student profile: the student, its duplicates, and
+// its prev/next neighbours — without loading the whole table.
+export function useStudentProfile(id: string, role: string, userId: string) {
+  const [student, setStudent] = useState<Student | null>(null);
+  const [duplicates, setDuplicates] = useState<Student[]>([]);
+  const [prevId, setPrevId] = useState<string | null>(null);
+  const [nextId, setNextId] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const reqId = useRef(0);
+
+  const load = useCallback(async () => {
+    const my = ++reqId.current;
+    setLoaded(false);
+    const { data } = await supabase
+      .from("students")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (my !== reqId.current) return;
+    const s = data ? fromRow(data as Row) : null;
+    setStudent(s);
+    setLoaded(true);
+    if (!s) {
+      setDuplicates([]);
+      setPrevId(null);
+      setNextId(null);
+      return;
+    }
+
+    const created = s.createdAt ?? "";
+    // Neighbour query: same pool bucket + (employees only see their own).
+    const neighbour = (dir: "next" | "prev") => {
+      let q = supabase.from("students").select("id");
+      q = dir === "next" ? q.gt("created_at", created) : q.lt("created_at", created);
+      q =
+        s.source === "my-students"
+          ? q.eq("source", "my-students")
+          : q.or("source.is.null,source.neq.my-students");
+      if (role !== "admin") q = q.eq("assigned_to", userId);
+      return q.order("created_at", { ascending: dir === "next" }).limit(1);
+    };
+
+    const [dups, nextRow, prevRow] = await Promise.all([
+      supabase.from("students").select("*").eq("phone", s.phone).neq("id", id),
+      neighbour("next"),
+      neighbour("prev"),
+    ]);
+    if (my !== reqId.current) return;
+    setDuplicates(((dups.data ?? []) as Row[]).map((r) => fromRow(r)));
+    setNextId((nextRow.data?.[0]?.id as string) ?? null);
+    setPrevId((prevRow.data?.[0]?.id as string) ?? null);
+  }, [id, role, userId]);
+
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel(`student-${id}-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "students", filter: `id=eq.${id}` },
+        () => load()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [load, id]);
+
+  const update = useCallback(
+    async (_id: string, patch: Partial<Omit<Student, "id">>) => {
+      reqId.current++;
+      setStudent((prev) => (prev ? { ...prev, ...patch } : prev));
+      await supabase.from("students").update(toRow(patch)).eq("id", id);
+    },
+    [id]
+  );
+
+  const requestDeletion = useCallback(async () => {
+    reqId.current++;
+    setStudent((prev) => (prev ? { ...prev, deletionRequested: true } : prev));
+    await supabase
+      .from("students")
+      .update({ deletion_requested: true })
+      .eq("id", id);
+  }, [id]);
+
+  const remove = useCallback(async () => {
+    await supabase.from("students").delete().eq("id", id);
+  }, [id]);
+
+  return {
+    student,
+    duplicates,
+    prevId,
+    nextId,
+    loaded,
+    update,
+    requestDeletion,
+    remove,
+  };
+}
