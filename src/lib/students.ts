@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uid } from "@/lib/uid";
 
@@ -99,8 +99,11 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
 export function useStudents() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Guards against overlapping refetches: only the newest one may write state.
+  const reqId = useRef(0);
 
   const refetch = useCallback(async () => {
+    const my = ++reqId.current;
     // Supabase returns at most 1000 rows per request. Page through them, but
     // render each page as it arrives so the UI is usable after the first batch
     // instead of waiting for the whole table.
@@ -113,6 +116,8 @@ export function useStudents() {
         .select("*")
         .order("created_at", { ascending: true })
         .range(from, from + pageSize - 1);
+      // A newer refetch started — drop this stale one so it can't revert state.
+      if (my !== reqId.current) return;
       if (error || !data || data.length === 0) break;
       acc.push(...data.map((r) => fromRow(r as Row)));
       setStudents([...acc]); // show progress immediately
@@ -220,11 +225,18 @@ export function useStudents() {
   }, []);
 
   const removeMany = useCallback(async (ids: string[]) => {
+    const set = new Set(ids);
+    // Optimistically drop them so the UI updates instantly.
+    setStudents((prev) => prev.filter((s) => !set.has(s.id)));
     await supabase.from("students").delete().in("id", ids);
   }, []);
 
   const assignMany = useCallback(async (ids: string[], staffId: string) => {
-    // Empty target = unassign (null).
+    const set = new Set(ids);
+    // Optimistically reflect the new assignment (empty target = unassign).
+    setStudents((prev) =>
+      prev.map((s) => (set.has(s.id) ? { ...s, assignedTo: staffId } : s))
+    );
     await supabase
       .from("students")
       .update({ assigned_to: staffId || null })
