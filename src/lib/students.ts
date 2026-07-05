@@ -176,7 +176,10 @@ export function useStudents() {
         .select();
       if (error) throw new Error(error.message);
       // Optimistically show it right away (realtime will reconcile).
-      if (rows?.[0]) setStudents((prev) => [...prev, fromRow(rows[0] as Row)]);
+      if (rows?.[0]) {
+        reqId.current++;
+        setStudents((prev) => [...prev, fromRow(rows[0] as Row)]);
+      }
     },
     []
   );
@@ -210,6 +213,7 @@ export function useStudents() {
 
   const update = useCallback(
     async (id: string, patch: Partial<Omit<Student, "id">>) => {
+      reqId.current++; // cancel any in-flight refetch so it can't revert this
       // Optimistic local update for snappy UI; realtime keeps others in sync.
       setStudents((prev) =>
         prev.map((s) => (s.id === id ? { ...s, ...patch } : s))
@@ -220,6 +224,7 @@ export function useStudents() {
   );
 
   const requestDeletion = useCallback(async (id: string) => {
+    reqId.current++;
     setStudents((prev) =>
       prev.map((s) => (s.id === id ? { ...s, deletionRequested: true } : s))
     );
@@ -230,11 +235,14 @@ export function useStudents() {
   }, []);
 
   const remove = useCallback(async (id: string) => {
+    reqId.current++;
+    setStudents((prev) => prev.filter((s) => s.id !== id));
     await supabase.from("students").delete().eq("id", id);
   }, []);
 
   const removeMany = useCallback(async (ids: string[]) => {
     const set = new Set(ids);
+    reqId.current++;
     // Optimistically drop them so the UI updates instantly.
     setStudents((prev) => prev.filter((s) => !set.has(s.id)));
     await supabase.from("students").delete().in("id", ids);
@@ -242,6 +250,7 @@ export function useStudents() {
 
   const assignMany = useCallback(async (ids: string[], staffId: string) => {
     const set = new Set(ids);
+    reqId.current++; // cancel any in-flight refetch so it can't revert this
     // Optimistically reflect the new assignment (empty target = unassign).
     setStudents((prev) =>
       prev.map((s) => (set.has(s.id) ? { ...s, assignedTo: staffId } : s))
