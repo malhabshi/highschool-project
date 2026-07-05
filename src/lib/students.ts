@@ -101,15 +101,19 @@ export function useStudents() {
   const [loaded, setLoaded] = useState(false);
   // Guards against overlapping refetches: only the newest one may write state.
   const reqId = useRef(0);
+  // Whether we've completed at least one full load.
+  const firstDone = useRef(false);
 
   const refetch = useCallback(async () => {
     const my = ++reqId.current;
-    // Supabase returns at most 1000 rows per request. Page through them, but
-    // render each page as it arrives so the UI is usable after the first batch
-    // instead of waiting for the whole table.
+    // Supabase returns at most 1000 rows per request, so page through them.
     const pageSize = 1000;
     let from = 0;
     const acc: Student[] = [];
+    // Stream partial pages ONLY on the very first load (fast first paint).
+    // On later refetches we set the full list once at the end, so already-shown
+    // students never blink out while a background reload is in progress.
+    const streaming = !firstDone.current;
     for (;;) {
       const { data, error } = await supabase
         .from("students")
@@ -120,12 +124,17 @@ export function useStudents() {
       if (my !== reqId.current) return;
       if (error || !data || data.length === 0) break;
       acc.push(...data.map((r) => fromRow(r as Row)));
-      setStudents([...acc]); // show progress immediately
-      setLoaded(true);
+      if (streaming) {
+        setStudents([...acc]);
+        setLoaded(true);
+      }
       if (data.length < pageSize) break;
       from += pageSize;
     }
+    if (my !== reqId.current) return;
+    setStudents(acc); // atomic final set (no blink on refetch)
     setLoaded(true);
+    firstDone.current = true;
   }, []);
 
   useEffect(() => {
