@@ -9,6 +9,7 @@ export type Attendee = {
   name: string;
   phone: string;
   country: string;
+  attended: boolean;
 };
 
 type Row = {
@@ -16,10 +17,17 @@ type Row = {
   name: string;
   phone: string;
   country: string;
+  attended: boolean;
 };
 
 function fromRow(r: Row): Attendee {
-  return { id: r.id, name: r.name, phone: r.phone, country: r.country };
+  return {
+    id: r.id,
+    name: r.name,
+    phone: r.phone,
+    country: r.country,
+    attended: r.attended ?? false,
+  };
 }
 
 // Cloud-backed list of people attending the annual meeting.

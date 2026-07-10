@@ -5,7 +5,7 @@ import { useAttendees } from "@/lib/meeting";
 import { telHref } from "@/lib/phone";
 
 export function MeetingTable() {
-  const { attendees, add, addMany, remove, loaded } = useAttendees();
+  const { attendees, add, addMany, update, remove, loaded } = useAttendees();
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -89,6 +89,9 @@ export function MeetingTable() {
                 <th className="px-5 py-3 font-medium">Name</th>
                 <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">Accepted in</th>
+                <th className="px-5 py-3 text-center font-medium" dir="rtl">
+                  حضر؟
+                </th>
                 <th className="px-5 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -115,6 +118,17 @@ export function MeetingTable() {
                   </td>
                   <td className="px-5 py-3 text-slate-600">
                     {a.country || "—"}
+                  </td>
+                  <td className="px-5 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={a.attended}
+                      onChange={(e) =>
+                        update(a.id, { attended: e.target.checked })
+                      }
+                      aria-label="حضر؟"
+                      className="h-4 w-4"
+                    />
                   </td>
                   <td className="px-5 py-3 text-right">
                     <button
