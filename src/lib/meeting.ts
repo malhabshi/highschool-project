@@ -13,6 +13,7 @@ export type Attendee = {
   applied: string; // "MASAR" | "no"
   masarEmployee: string; // employee who helped (only meaningful when MASAR)
   ielts: boolean;
+  otherOffice: boolean; // applied with another office?
 };
 
 type Row = {
@@ -24,6 +25,7 @@ type Row = {
   applied: string;
   masar_employee: string;
   ielts: boolean;
+  other_office: boolean;
 };
 
 function fromRow(r: Row): Attendee {
@@ -36,6 +38,7 @@ function fromRow(r: Row): Attendee {
     applied: r.applied ?? "no",
     masarEmployee: r.masar_employee ?? "",
     ielts: r.ielts ?? false,
+    otherOffice: r.other_office ?? false,
   };
 }
 
@@ -76,6 +79,7 @@ export function useAttendees() {
       applied: string;
       masarEmployee: string;
       ielts: boolean;
+      otherOffice: boolean;
     }) => {
       const { data: rows, error } = await supabase
         .from("meeting_attendees")
@@ -86,6 +90,7 @@ export function useAttendees() {
           applied: data.applied,
           masar_employee: data.masarEmployee,
           ielts: data.ielts,
+          other_office: data.otherOffice,
         })
         .select();
       if (error) throw new Error(error.message);
@@ -104,6 +109,7 @@ export function useAttendees() {
         applied: string;
         masarEmployee: string;
         ielts: boolean;
+        otherOffice: boolean;
       }[]
     ) => {
       const chunk = 500;
@@ -114,6 +120,7 @@ export function useAttendees() {
         applied: d.applied,
         masar_employee: d.masarEmployee,
         ielts: d.ielts,
+        other_office: d.otherOffice,
       }));
       for (let i = 0; i < mapped.length; i += chunk) {
         await supabase

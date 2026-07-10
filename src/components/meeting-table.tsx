@@ -107,6 +107,9 @@ export function MeetingTable() {
                   حضر؟
                 </th>
                 <th className="px-5 py-3 text-center font-medium">IELTS?</th>
+                <th className="px-5 py-3 text-center font-medium" dir="rtl">
+                  مقدم مع مكتب ثاني ؟
+                </th>
                 <th className="px-5 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -177,6 +180,17 @@ export function MeetingTable() {
                       className="h-4 w-4"
                     />
                   </td>
+                  <td className="px-5 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={a.otherOffice}
+                      onChange={(e) =>
+                        update(a.id, { otherOffice: e.target.checked })
+                      }
+                      aria-label="مقدم مع مكتب ثاني ؟"
+                      className="h-4 w-4"
+                    />
+                  </td>
                   <td className="px-5 py-3 text-right">
                     <button
                       onClick={() => {
@@ -243,6 +257,7 @@ function BulkImportPanel({
       applied: string;
       masarEmployee: string;
       ielts: boolean;
+      otherOffice: boolean;
     }[]
   ) => Promise<void>;
   onCancel: () => void;
@@ -251,9 +266,9 @@ function BulkImportPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,Phone 2,Phone 3,Country,Applied with us,MASAR Employee,IELTS\n" +
-      "Example Person,90001234,90009999,,UK,MASAR,Ahmad Dashti,yes\n" +
-      "Someone Else,90005678,,,USA,,,no\n";
+      "Name,Phone,Phone 2,Phone 3,Country,Applied with us,MASAR Employee,IELTS,Another office\n" +
+      "Example Person,90001234,90009999,,UK,MASAR,Ahmad Dashti,yes,no\n" +
+      "Someone Else,90005678,,,USA,,,no,yes\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -280,6 +295,7 @@ function BulkImportPanel({
         applied: string;
         masarEmployee: string;
         ielts: boolean;
+        otherOffice: boolean;
       }[] = [];
       let skipped = 0;
       const yes = new Set(["yes", "y", "1", "true", "✓", "نعم"]);
@@ -293,11 +309,20 @@ function BulkImportPanel({
         // Employee name only kept when they applied with us.
         const masarEmployee = applied === "MASAR" ? (r[6] ?? "").trim() : "";
         const ielts = yes.has((r[7] ?? "").trim().toLowerCase());
+        const otherOffice = yes.has((r[8] ?? "").trim().toLowerCase());
         if (!name && !phone) {
           skipped++;
           continue;
         }
-        valid.push({ name, phone, country, applied, masarEmployee, ielts });
+        valid.push({
+          name,
+          phone,
+          country,
+          applied,
+          masarEmployee,
+          ielts,
+          otherOffice,
+        });
       }
       if (valid.length) await onImport(valid);
       setResult(
@@ -316,10 +341,11 @@ function BulkImportPanel({
         Download the template, fill it in (columns:{" "}
         <span className="font-medium">
           Name, Phone, Phone 2, Phone 3, Country, Applied with us, MASAR
-          Employee, IELTS
+          Employee, IELTS, Another office
         </span>
         ), then upload it. Each person can have up to 3 numbers (Phone, Phone 2,
-        Phone 3). A row needs at least a Name or a Phone. In the{" "}
+        Phone 3). A row needs at least a Name or a Phone. For IELTS and Another
+        office, write yes or leave blank/no. In the{" "}
         <span className="font-medium">Applied with us</span> column, put anything
         (e.g. MASAR) if they applied with us — leave it blank if not. Put the
         helping employee&apos;s name in{" "}
@@ -366,6 +392,7 @@ function AddAttendeeForm({
     applied: string;
     masarEmployee: string;
     ielts: boolean;
+    otherOffice: boolean;
   }) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -377,6 +404,7 @@ function AddAttendeeForm({
   const [applied, setApplied] = useState(false);
   const [masarEmployee, setMasarEmployee] = useState("");
   const [ielts, setIelts] = useState(false);
+  const [otherOffice, setOtherOffice] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -391,6 +419,7 @@ function AddAttendeeForm({
         applied: applied ? "MASAR" : "no",
         masarEmployee: applied ? masarEmployee.trim() : "",
         ielts,
+        otherOffice,
       });
     } catch (e) {
       setError((e as Error).message);
@@ -472,6 +501,16 @@ function AddAttendeeForm({
           className="h-4 w-4"
         />
         Has IELTS
+      </label>
+
+      <label className="flex items-center gap-2 text-sm text-slate-700" dir="rtl">
+        <input
+          type="checkbox"
+          checked={otherOffice}
+          onChange={(e) => setOtherOffice(e.target.checked)}
+          className="h-4 w-4"
+        />
+        مقدم مع مكتب ثاني ؟
       </label>
 
       {applied && (
