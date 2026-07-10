@@ -98,7 +98,7 @@ export function MeetingTable() {
       )}
 
       {attendees.length > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-3 py-3 sm:px-5">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -129,23 +129,33 @@ export function MeetingTable() {
           No matches.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[480px] text-left text-sm">
+        <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
+          <table className="w-full min-w-[820px] whitespace-nowrap text-left text-sm">
             <thead className="text-xs uppercase text-slate-500">
               <tr className="border-b border-slate-100">
-                <th className="px-5 py-3 font-medium">Ticket #</th>
-                <th className="px-5 py-3 font-medium">Name</th>
-                <th className="px-5 py-3 font-medium">Phone</th>
-                <th className="px-5 py-3 font-medium">Accepted in</th>
-                <th className="px-5 py-3 font-medium">Applied with us</th>
-                <th className="px-5 py-3 text-center font-medium" dir="rtl">
+                <th className="px-3 py-3 font-medium sm:px-5">Ticket #</th>
+                <th className="px-3 py-3 font-medium sm:px-5">Name</th>
+                <th className="px-3 py-3 font-medium sm:px-5">Phone</th>
+                <th className="px-3 py-3 font-medium sm:px-5">Accepted in</th>
+                <th className="px-3 py-3 font-medium sm:px-5">Applied with us</th>
+                <th
+                  className="px-3 py-3 text-center font-medium sm:px-5"
+                  dir="rtl"
+                >
                   حضر؟
                 </th>
-                <th className="px-5 py-3 text-center font-medium">IELTS?</th>
-                <th className="px-5 py-3 text-center font-medium" dir="rtl">
+                <th className="px-3 py-3 text-center font-medium sm:px-5">
+                  IELTS?
+                </th>
+                <th
+                  className="px-3 py-3 text-center font-medium sm:px-5"
+                  dir="rtl"
+                >
                   مقدم مع مكتب ثاني ؟
                 </th>
-                <th className="px-5 py-3 text-right font-medium">Actions</th>
+                <th className="px-3 py-3 text-right font-medium sm:px-5">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -159,7 +169,7 @@ export function MeetingTable() {
                   }`}
                 >
                   <td
-                    className={`border-l-8 px-5 py-3 ${
+                    className={`border-l-8 px-3 py-3 sm:px-5 ${
                       a.applied === "MASAR"
                         ? "border-blue-600"
                         : "border-red-600"
@@ -170,10 +180,10 @@ export function MeetingTable() {
                       onSave={(v) => update(a.id, { ticket: v })}
                     />
                   </td>
-                  <td className="px-5 py-3 font-medium text-slate-800">
+                  <td className="px-3 py-3 sm:px-5 font-medium text-slate-800">
                     {a.name || "—"}
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-3 py-3 sm:px-5">
                     {splitPhones(a.phone).length > 0 ? (
                       <div className="flex flex-col gap-0.5">
                         {splitPhones(a.phone).map((p, i) => (
@@ -190,10 +200,10 @@ export function MeetingTable() {
                       <span className="text-slate-400">—</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-slate-600">
+                  <td className="px-3 py-3 sm:px-5 text-slate-600">
                     {a.country || "—"}
                   </td>
-                  <td className="px-5 py-3">
+                  <td className="px-3 py-3 sm:px-5">
                     {a.applied === "MASAR" ? (
                       <div className="flex flex-col gap-0.5">
                         <span className="w-fit rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
@@ -209,7 +219,7 @@ export function MeetingTable() {
                       <span className="text-slate-400">no</span>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-center">
+                  <td className="px-3 py-3 sm:px-5 text-center">
                     <input
                       type="checkbox"
                       checked={a.attended}
@@ -217,10 +227,10 @@ export function MeetingTable() {
                         update(a.id, { attended: e.target.checked })
                       }
                       aria-label="حضر؟"
-                      className="h-4 w-4"
+                      className="h-5 w-5"
                     />
                   </td>
-                  <td className="px-5 py-3 text-center">
+                  <td className="px-3 py-3 sm:px-5 text-center">
                     <input
                       type="checkbox"
                       checked={a.ielts}
@@ -228,10 +238,10 @@ export function MeetingTable() {
                         update(a.id, { ielts: e.target.checked })
                       }
                       aria-label="IELTS?"
-                      className="h-4 w-4"
+                      className="h-5 w-5"
                     />
                   </td>
-                  <td className="px-5 py-3 text-center">
+                  <td className="px-3 py-3 sm:px-5 text-center">
                     <input
                       type="checkbox"
                       checked={a.otherOffice}
@@ -239,10 +249,10 @@ export function MeetingTable() {
                         update(a.id, { otherOffice: e.target.checked })
                       }
                       aria-label="مقدم مع مكتب ثاني ؟"
-                      className="h-4 w-4"
+                      className="h-5 w-5"
                     />
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-3 py-3 sm:px-5 text-right">
                     <button
                       onClick={() => {
                         if (confirm(`Remove ${a.name || "this person"}?`))
@@ -558,7 +568,7 @@ function AddAttendeeForm({
           type="checkbox"
           checked={applied}
           onChange={(e) => setApplied(e.target.checked)}
-          className="h-4 w-4"
+          className="h-5 w-5"
         />
         Applied with us (MASAR)
       </label>
@@ -568,7 +578,7 @@ function AddAttendeeForm({
           type="checkbox"
           checked={ielts}
           onChange={(e) => setIelts(e.target.checked)}
-          className="h-4 w-4"
+          className="h-5 w-5"
         />
         Has IELTS
       </label>
@@ -578,7 +588,7 @@ function AddAttendeeForm({
           type="checkbox"
           checked={otherOffice}
           onChange={(e) => setOtherOffice(e.target.checked)}
-          className="h-4 w-4"
+          className="h-5 w-5"
         />
         مقدم مع مكتب ثاني ؟
       </label>
