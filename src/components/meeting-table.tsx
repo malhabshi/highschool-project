@@ -8,6 +8,17 @@ export function MeetingTable() {
   const { attendees, add, addMany, remove, loaded } = useAttendees();
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const term = search.trim().toLowerCase();
+  const phoneQuery = search.replace(/\D/g, "");
+  const shown = term
+    ? attendees.filter(
+        (a) =>
+          a.name.toLowerCase().includes(term) ||
+          (phoneQuery.length > 0 && a.phone.includes(phoneQuery))
+      )
+    : attendees;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -49,11 +60,26 @@ export function MeetingTable() {
         />
       )}
 
+      {attendees.length > 0 && (
+        <div className="border-b border-slate-200 px-5 py-3">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="🔍 Search name or phone…"
+            className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
+          />
+        </div>
+      )}
+
       {!loaded ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">Loading…</p>
       ) : attendees.length === 0 ? (
         <p className="px-5 py-8 text-center text-sm text-slate-500">
           No one added yet. Click “Add person”.
+        </p>
+      ) : shown.length === 0 ? (
+        <p className="px-5 py-8 text-center text-sm text-slate-500">
+          No matches.
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -67,7 +93,7 @@ export function MeetingTable() {
               </tr>
             </thead>
             <tbody>
-              {attendees.map((a) => (
+              {shown.map((a) => (
                 <tr
                   key={a.id}
                   className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
