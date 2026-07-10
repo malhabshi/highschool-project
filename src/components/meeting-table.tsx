@@ -89,6 +89,7 @@ export function MeetingTable() {
                 <th className="px-5 py-3 font-medium">Name</th>
                 <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">Accepted in</th>
+                <th className="px-5 py-3 font-medium">Applied with us</th>
                 <th className="px-5 py-3 text-center font-medium" dir="rtl">
                   حضر؟
                 </th>
@@ -118,6 +119,15 @@ export function MeetingTable() {
                   </td>
                   <td className="px-5 py-3 text-slate-600">
                     {a.country || "—"}
+                  </td>
+                  <td className="px-5 py-3">
+                    {a.applied === "MASAR" ? (
+                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                        MASAR
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">no</span>
+                    )}
                   </td>
                   <td className="px-5 py-3 text-center">
                     <input
@@ -189,7 +199,12 @@ function BulkImportPanel({
   onCancel,
 }: {
   onImport: (
-    list: { name: string; phone: string; country: string }[]
+    list: {
+      name: string;
+      phone: string;
+      country: string;
+      applied: string;
+    }[]
   ) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -197,7 +212,9 @@ function BulkImportPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,Country\n" + "Example Person,90001234,UK\n";
+      "Name,Phone,Country,Applied with us\n" +
+      "Example Person,90001234,UK,MASAR\n" +
+      "Someone Else,90005678,USA,\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -217,17 +234,24 @@ function BulkImportPanel({
       const head0 = rows[0]?.[0]?.trim().toLowerCase();
       if (head0 === "name") rows.shift();
 
-      const valid: { name: string; phone: string; country: string }[] = [];
+      const valid: {
+        name: string;
+        phone: string;
+        country: string;
+        applied: string;
+      }[] = [];
       let skipped = 0;
       for (const r of rows) {
         const name = (r[0] ?? "").trim();
         const phone = (r[1] ?? "").trim();
         const country = (r[2] ?? "").trim();
+        // Applied-with-us column: anything filled in => MASAR, blank => no.
+        const applied = (r[3] ?? "").trim() ? "MASAR" : "no";
         if (!name && !phone) {
           skipped++;
           continue;
         }
-        valid.push({ name, phone, country });
+        valid.push({ name, phone, country, applied });
       }
       if (valid.length) await onImport(valid);
       setResult(
@@ -244,8 +268,10 @@ function BulkImportPanel({
       <h3 className="font-semibold text-slate-800">Bulk import attendees</h3>
       <p className="text-sm text-slate-500">
         Download the template, fill it in (columns:{" "}
-        <span className="font-medium">Name, Phone, Country</span>), then upload
-        it. A row needs at least a Name or a Phone.
+        <span className="font-medium">Name, Phone, Country, Applied with us</span>
+        ), then upload it. A row needs at least a Name or a Phone. In the{" "}
+        <span className="font-medium">Applied with us</span> column, put anything
+        (e.g. MASAR) if they applied with us — leave it blank if not.
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -283,12 +309,14 @@ function AddAttendeeForm({
     name: string;
     phone: string;
     country: string;
+    applied: string;
   }) => Promise<void>;
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
+  const [applied, setApplied] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -300,6 +328,7 @@ function AddAttendeeForm({
         name: name.trim(),
         phone: phone.trim(),
         country: country.trim(),
+        applied: applied ? "MASAR" : "no",
       });
     } catch (e) {
       setError((e as Error).message);
@@ -345,6 +374,16 @@ function AddAttendeeForm({
           />
         </label>
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={applied}
+          onChange={(e) => setApplied(e.target.checked)}
+          className="h-4 w-4"
+        />
+        Applied with us (MASAR)
+      </label>
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

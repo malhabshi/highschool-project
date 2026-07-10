@@ -10,6 +10,7 @@ export type Attendee = {
   phone: string;
   country: string;
   attended: boolean;
+  applied: string; // "MASAR" | "no"
 };
 
 type Row = {
@@ -18,6 +19,7 @@ type Row = {
   phone: string;
   country: string;
   attended: boolean;
+  applied: string;
 };
 
 function fromRow(r: Row): Attendee {
@@ -27,6 +29,7 @@ function fromRow(r: Row): Attendee {
     phone: r.phone,
     country: r.country,
     attended: r.attended ?? false,
+    applied: r.applied ?? "no",
   };
 }
 
@@ -60,7 +63,12 @@ export function useAttendees() {
   }, [refetch]);
 
   const add = useCallback(
-    async (data: { name: string; phone: string; country: string }) => {
+    async (data: {
+      name: string;
+      phone: string;
+      country: string;
+      applied: string;
+    }) => {
       const { data: rows, error } = await supabase
         .from("meeting_attendees")
         .insert(data)
@@ -73,7 +81,14 @@ export function useAttendees() {
   );
 
   const addMany = useCallback(
-    async (list: { name: string; phone: string; country: string }[]) => {
+    async (
+      list: {
+        name: string;
+        phone: string;
+        country: string;
+        applied: string;
+      }[]
+    ) => {
       const chunk = 500;
       for (let i = 0; i < list.length; i += chunk) {
         await supabase
