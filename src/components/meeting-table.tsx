@@ -152,13 +152,17 @@ export function MeetingTable() {
               {shown.map((a) => (
                 <tr
                   key={a.id}
-                  className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
+                  className={`border-b border-white last:border-0 ${
+                    a.applied === "MASAR"
+                      ? "bg-blue-100 hover:bg-blue-200"
+                      : "bg-red-100 hover:bg-red-200"
+                  }`}
                 >
                   <td
-                    className={`border-l-4 px-5 py-3 ${
+                    className={`border-l-8 px-5 py-3 ${
                       a.applied === "MASAR"
-                        ? "border-blue-500"
-                        : "border-red-500"
+                        ? "border-blue-600"
+                        : "border-red-600"
                     }`}
                   >
                     <TicketInput
