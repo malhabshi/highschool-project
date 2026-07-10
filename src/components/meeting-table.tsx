@@ -98,13 +98,23 @@ export function MeetingTable() {
       )}
 
       {attendees.length > 0 && (
-        <div className="border-b border-slate-200 px-5 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-3">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="🔍 Search name or phone…"
             className="w-full max-w-sm rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none focus:border-blue-500"
           />
+          <div className="flex items-center gap-4 text-xs text-slate-500">
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-1.5 rounded-sm bg-blue-500" /> Applied with
+              MASAR
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-1.5 rounded-sm bg-red-500" /> Other agent /
+              none
+            </span>
+          </div>
         </div>
       )}
 
@@ -144,7 +154,13 @@ export function MeetingTable() {
                   key={a.id}
                   className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
                 >
-                  <td className="px-5 py-3">
+                  <td
+                    className={`border-l-4 px-5 py-3 ${
+                      a.applied === "MASAR"
+                        ? "border-blue-500"
+                        : "border-red-500"
+                    }`}
+                  >
                     <TicketInput
                       value={a.ticket}
                       onSave={(v) => update(a.id, { ticket: v })}
