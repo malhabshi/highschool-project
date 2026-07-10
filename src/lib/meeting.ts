@@ -64,6 +64,19 @@ export function useAttendees() {
     []
   );
 
+  const addMany = useCallback(
+    async (list: { name: string; phone: string; country: string }[]) => {
+      const chunk = 500;
+      for (let i = 0; i < list.length; i += chunk) {
+        await supabase
+          .from("meeting_attendees")
+          .insert(list.slice(i, i + chunk));
+      }
+      await refetch();
+    },
+    [refetch]
+  );
+
   const update = useCallback(
     async (id: string, patch: Partial<Omit<Attendee, "id">>) => {
       setAttendees((prev) =>
@@ -79,5 +92,5 @@ export function useAttendees() {
     await supabase.from("meeting_attendees").delete().eq("id", id);
   }, []);
 
-  return { attendees, add, update, remove, loaded };
+  return { attendees, add, addMany, update, remove, loaded };
 }

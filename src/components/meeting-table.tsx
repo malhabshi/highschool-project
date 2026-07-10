@@ -5,8 +5,9 @@ import { useAttendees } from "@/lib/meeting";
 import { telHref } from "@/lib/phone";
 
 export function MeetingTable() {
-  const { attendees, add, remove, loaded } = useAttendees();
+  const { attendees, add, addMany, remove, loaded } = useAttendees();
   const [adding, setAdding] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -17,6 +18,12 @@ export function MeetingTable() {
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-500">{attendees.length} total</span>
           <button
+            onClick={() => setBulkOpen(true)}
+            className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            Bulk import
+          </button>
+          <button
             onClick={() => setAdding(true)}
             className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
           >
@@ -24,6 +31,13 @@ export function MeetingTable() {
           </button>
         </div>
       </div>
+
+      {bulkOpen && (
+        <BulkImportPanel
+          onCancel={() => setBulkOpen(false)}
+          onImport={(list) => addMany(list)}
+        />
+      )}
 
       {adding && (
         <AddAttendeeForm
@@ -93,6 +107,130 @@ export function MeetingTable() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+// Minimal CSV parser (handles quoted fields and commas inside quotes).
+function parseCSV(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let field = "";
+  let inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") {
+      row.push(field);
+      field = "";
+    } else if (c === "\n") {
+      row.push(field);
+      rows.push(row);
+      row = [];
+      field = "";
+    } else if (c !== "\r") field += c;
+  }
+  if (field.length > 0 || row.length > 0) {
+    row.push(field);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function BulkImportPanel({
+  onImport,
+  onCancel,
+}: {
+  onImport: (
+    list: { name: string; phone: string; country: string }[]
+  ) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [result, setResult] = useState("");
+
+  function downloadTemplate() {
+    const content =
+      "Name,Phone,Country\n" + "Example Person,90001234,UK\n";
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "attendees-template.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async () => {
+      const text = String(reader.result ?? "");
+      const rows = parseCSV(text).filter((r) => r.some((c) => c.trim() !== ""));
+      const head0 = rows[0]?.[0]?.trim().toLowerCase();
+      if (head0 === "name") rows.shift();
+
+      const valid: { name: string; phone: string; country: string }[] = [];
+      let skipped = 0;
+      for (const r of rows) {
+        const name = (r[0] ?? "").trim();
+        const phone = (r[1] ?? "").trim();
+        const country = (r[2] ?? "").trim();
+        if (!name && !phone) {
+          skipped++;
+          continue;
+        }
+        valid.push({ name, phone, country });
+      }
+      if (valid.length) await onImport(valid);
+      setResult(
+        `Imported ${valid.length} person(s)` +
+          (skipped ? `, skipped ${skipped} empty row(s).` : ".")
+      );
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="space-y-3 border-b border-slate-200 bg-slate-50 px-5 py-4">
+      <h3 className="font-semibold text-slate-800">Bulk import attendees</h3>
+      <p className="text-sm text-slate-500">
+        Download the template, fill it in (columns:{" "}
+        <span className="font-medium">Name, Phone, Country</span>), then upload
+        it. A row needs at least a Name or a Phone.
+      </p>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          onClick={downloadTemplate}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+        >
+          ⬇ Download template
+        </button>
+        <label className="cursor-pointer rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700">
+          Upload CSV
+          <input
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleFile}
+            className="hidden"
+          />
+        </label>
+        <button
+          onClick={onCancel}
+          className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100"
+        >
+          Close
+        </button>
+      </div>
+      {result && <p className="text-sm font-medium text-green-700">{result}</p>}
     </div>
   );
 }
