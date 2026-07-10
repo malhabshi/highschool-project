@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAttendees } from "@/lib/meeting";
 import { telHref } from "@/lib/phone";
 
@@ -15,6 +15,30 @@ function splitPhones(raw: string): string[] {
 // Join up to 3 entered numbers into one stored string.
 function joinPhones(...nums: string[]): string {
   return nums.map((n) => n.trim()).filter(Boolean).join(" / ");
+}
+
+// Inline, digits-only ticket-number field (saves on blur).
+function TicketInput({
+  value,
+  onSave,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+}) {
+  const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]);
+  return (
+    <input
+      value={v}
+      inputMode="numeric"
+      onChange={(e) => setV(e.target.value.replace(/\D/g, ""))}
+      onBlur={() => {
+        if (v !== value) onSave(v);
+      }}
+      placeholder="—"
+      className="w-20 rounded-md border border-slate-300 px-2 py-1 text-sm outline-none focus:border-blue-500"
+    />
+  );
 }
 
 export function MeetingTable() {
@@ -99,6 +123,7 @@ export function MeetingTable() {
           <table className="w-full min-w-[480px] text-left text-sm">
             <thead className="text-xs uppercase text-slate-500">
               <tr className="border-b border-slate-100">
+                <th className="px-5 py-3 font-medium">Ticket #</th>
                 <th className="px-5 py-3 font-medium">Name</th>
                 <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">Accepted in</th>
@@ -119,6 +144,12 @@ export function MeetingTable() {
                   key={a.id}
                   className="border-b border-slate-50 last:border-0 hover:bg-slate-50"
                 >
+                  <td className="px-5 py-3">
+                    <TicketInput
+                      value={a.ticket}
+                      onSave={(v) => update(a.id, { ticket: v })}
+                    />
+                  </td>
                   <td className="px-5 py-3 font-medium text-slate-800">
                     {a.name || "—"}
                   </td>
@@ -258,6 +289,7 @@ function BulkImportPanel({
       masarEmployee: string;
       ielts: boolean;
       otherOffice: boolean;
+      ticket: string;
     }[]
   ) => Promise<void>;
   onCancel: () => void;
@@ -266,9 +298,9 @@ function BulkImportPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,Phone 2,Phone 3,Country,Applied with us,MASAR Employee,IELTS,Another office\n" +
-      "Example Person,90001234,90009999,,UK,MASAR,Ahmad Dashti,yes,no\n" +
-      "Someone Else,90005678,,,USA,,,no,yes\n";
+      "Name,Phone,Phone 2,Phone 3,Country,Applied with us,MASAR Employee,IELTS,Another office,Ticket\n" +
+      "Example Person,90001234,90009999,,UK,MASAR,Ahmad Dashti,yes,no,101\n" +
+      "Someone Else,90005678,,,USA,,,no,yes,\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -296,6 +328,7 @@ function BulkImportPanel({
         masarEmployee: string;
         ielts: boolean;
         otherOffice: boolean;
+        ticket: string;
       }[] = [];
       let skipped = 0;
       const yes = new Set(["yes", "y", "1", "true", "✓", "نعم"]);
@@ -310,6 +343,7 @@ function BulkImportPanel({
         const masarEmployee = applied === "MASAR" ? (r[6] ?? "").trim() : "";
         const ielts = yes.has((r[7] ?? "").trim().toLowerCase());
         const otherOffice = yes.has((r[8] ?? "").trim().toLowerCase());
+        const ticket = (r[9] ?? "").replace(/\D/g, "");
         if (!name && !phone) {
           skipped++;
           continue;
@@ -322,6 +356,7 @@ function BulkImportPanel({
           masarEmployee,
           ielts,
           otherOffice,
+          ticket,
         });
       }
       if (valid.length) await onImport(valid);
@@ -341,7 +376,7 @@ function BulkImportPanel({
         Download the template, fill it in (columns:{" "}
         <span className="font-medium">
           Name, Phone, Phone 2, Phone 3, Country, Applied with us, MASAR
-          Employee, IELTS, Another office
+          Employee, IELTS, Another office, Ticket
         </span>
         ), then upload it. Each person can have up to 3 numbers (Phone, Phone 2,
         Phone 3). A row needs at least a Name or a Phone. For IELTS and Another
@@ -393,6 +428,7 @@ function AddAttendeeForm({
     masarEmployee: string;
     ielts: boolean;
     otherOffice: boolean;
+    ticket: string;
   }) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -405,6 +441,7 @@ function AddAttendeeForm({
   const [masarEmployee, setMasarEmployee] = useState("");
   const [ielts, setIelts] = useState(false);
   const [otherOffice, setOtherOffice] = useState(false);
+  const [ticket, setTicket] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -420,6 +457,7 @@ function AddAttendeeForm({
         masarEmployee: applied ? masarEmployee.trim() : "",
         ielts,
         otherOffice,
+        ticket,
       });
     } catch (e) {
       setError((e as Error).message);
@@ -482,6 +520,18 @@ function AddAttendeeForm({
           />
         </label>
       </div>
+
+      <label className="block max-w-xs">
+        <span className="mb-1 block text-sm font-medium text-slate-600">
+          Ticket # <span className="text-slate-400">(numbers only)</span>
+        </span>
+        <input
+          value={ticket}
+          inputMode="numeric"
+          onChange={(e) => setTicket(e.target.value.replace(/\D/g, ""))}
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+        />
+      </label>
 
       <label className="flex items-center gap-2 text-sm text-slate-700">
         <input
