@@ -4,6 +4,19 @@ import { useState } from "react";
 import { useAttendees } from "@/lib/meeting";
 import { telHref } from "@/lib/phone";
 
+// A person can have 1-3 numbers stored together; split them for display.
+function splitPhones(raw: string): string[] {
+  return (raw ?? "")
+    .split(/[\/,;\n]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+// Join up to 3 entered numbers into one stored string.
+function joinPhones(...nums: string[]): string {
+  return nums.map((n) => n.trim()).filter(Boolean).join(" / ");
+}
+
 export function MeetingTable() {
   const { attendees, add, addMany, update, remove, loaded } = useAttendees();
   const [adding, setAdding] = useState(false);
@@ -90,10 +103,10 @@ export function MeetingTable() {
                 <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">Accepted in</th>
                 <th className="px-5 py-3 font-medium">Applied with us</th>
-                <th className="px-5 py-3 text-center font-medium">IELTS?</th>
                 <th className="px-5 py-3 text-center font-medium" dir="rtl">
                   حضر؟
                 </th>
+                <th className="px-5 py-3 text-center font-medium">IELTS?</th>
                 <th className="px-5 py-3 text-right font-medium">Actions</th>
               </tr>
             </thead>
@@ -107,13 +120,18 @@ export function MeetingTable() {
                     {a.name || "—"}
                   </td>
                   <td className="px-5 py-3">
-                    {a.phone ? (
-                      <a
-                        href={telHref(a.phone)}
-                        className="text-blue-600 hover:underline"
-                      >
-                        {a.phone}
-                      </a>
+                    {splitPhones(a.phone).length > 0 ? (
+                      <div className="flex flex-col gap-0.5">
+                        {splitPhones(a.phone).map((p, i) => (
+                          <a
+                            key={i}
+                            href={telHref(p)}
+                            className="text-blue-600 hover:underline"
+                          >
+                            {p}
+                          </a>
+                        ))}
+                      </div>
                     ) : (
                       <span className="text-slate-400">—</span>
                     )}
@@ -140,22 +158,22 @@ export function MeetingTable() {
                   <td className="px-5 py-3 text-center">
                     <input
                       type="checkbox"
-                      checked={a.ielts}
+                      checked={a.attended}
                       onChange={(e) =>
-                        update(a.id, { ielts: e.target.checked })
+                        update(a.id, { attended: e.target.checked })
                       }
-                      aria-label="IELTS?"
+                      aria-label="حضر؟"
                       className="h-4 w-4"
                     />
                   </td>
                   <td className="px-5 py-3 text-center">
                     <input
                       type="checkbox"
-                      checked={a.attended}
+                      checked={a.ielts}
                       onChange={(e) =>
-                        update(a.id, { attended: e.target.checked })
+                        update(a.id, { ielts: e.target.checked })
                       }
-                      aria-label="حضر؟"
+                      aria-label="IELTS?"
                       className="h-4 w-4"
                     />
                   </td>
@@ -233,9 +251,9 @@ function BulkImportPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,Country,Applied with us,MASAR Employee,IELTS\n" +
-      "Example Person,90001234,UK,MASAR,Ahmad Dashti,yes\n" +
-      "Someone Else,90005678,USA,,,no\n";
+      "Name,Phone,Phone 2,Phone 3,Country,Applied with us,MASAR Employee,IELTS\n" +
+      "Example Person,90001234,90009999,,UK,MASAR,Ahmad Dashti,yes\n" +
+      "Someone Else,90005678,,,USA,,,no\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -267,13 +285,14 @@ function BulkImportPanel({
       const yes = new Set(["yes", "y", "1", "true", "✓", "نعم"]);
       for (const r of rows) {
         const name = (r[0] ?? "").trim();
-        const phone = (r[1] ?? "").trim();
-        const country = (r[2] ?? "").trim();
+        // Up to 3 numbers combined into one field.
+        const phone = joinPhones(r[1] ?? "", r[2] ?? "", r[3] ?? "");
+        const country = (r[4] ?? "").trim();
         // Applied-with-us column: anything filled in => MASAR, blank => no.
-        const applied = (r[3] ?? "").trim() ? "MASAR" : "no";
+        const applied = (r[5] ?? "").trim() ? "MASAR" : "no";
         // Employee name only kept when they applied with us.
-        const masarEmployee = applied === "MASAR" ? (r[4] ?? "").trim() : "";
-        const ielts = yes.has((r[5] ?? "").trim().toLowerCase());
+        const masarEmployee = applied === "MASAR" ? (r[6] ?? "").trim() : "";
+        const ielts = yes.has((r[7] ?? "").trim().toLowerCase());
         if (!name && !phone) {
           skipped++;
           continue;
@@ -296,9 +315,11 @@ function BulkImportPanel({
       <p className="text-sm text-slate-500">
         Download the template, fill it in (columns:{" "}
         <span className="font-medium">
-          Name, Phone, Country, Applied with us, MASAR Employee, IELTS
+          Name, Phone, Phone 2, Phone 3, Country, Applied with us, MASAR
+          Employee, IELTS
         </span>
-        ), then upload it. A row needs at least a Name or a Phone. In the{" "}
+        ), then upload it. Each person can have up to 3 numbers (Phone, Phone 2,
+        Phone 3). A row needs at least a Name or a Phone. In the{" "}
         <span className="font-medium">Applied with us</span> column, put anything
         (e.g. MASAR) if they applied with us — leave it blank if not. Put the
         helping employee&apos;s name in{" "}
@@ -349,7 +370,9 @@ function AddAttendeeForm({
   onCancel: () => void;
 }) {
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone1, setPhone1] = useState("");
+  const [phone2, setPhone2] = useState("");
+  const [phone3, setPhone3] = useState("");
   const [country, setCountry] = useState("");
   const [applied, setApplied] = useState(false);
   const [masarEmployee, setMasarEmployee] = useState("");
@@ -363,7 +386,7 @@ function AddAttendeeForm({
     try {
       await onAdd({
         name: name.trim(),
-        phone: phone.trim(),
+        phone: joinPhones(phone1, phone2, phone3),
         country: country.trim(),
         applied: applied ? "MASAR" : "no",
         masarEmployee: applied ? masarEmployee.trim() : "",
@@ -392,14 +415,31 @@ function AddAttendeeForm({
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-slate-600">
-            Phone number
+            Phone numbers <span className="text-slate-400">(up to 3)</span>
           </span>
-          <input
-            value={phone}
-            inputMode="tel"
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
-          />
+          <div className="space-y-2">
+            <input
+              value={phone1}
+              inputMode="tel"
+              onChange={(e) => setPhone1(e.target.value)}
+              placeholder="Phone 1"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            />
+            <input
+              value={phone2}
+              inputMode="tel"
+              onChange={(e) => setPhone2(e.target.value)}
+              placeholder="Phone 2 (optional)"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            />
+            <input
+              value={phone3}
+              inputMode="tel"
+              onChange={(e) => setPhone3(e.target.value)}
+              placeholder="Phone 3 (optional)"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+            />
+          </div>
         </label>
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-slate-600">
