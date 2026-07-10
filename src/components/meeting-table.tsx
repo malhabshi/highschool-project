@@ -122,9 +122,16 @@ export function MeetingTable() {
                   </td>
                   <td className="px-5 py-3">
                     {a.applied === "MASAR" ? (
-                      <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
-                        MASAR
-                      </span>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="w-fit rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                          MASAR
+                        </span>
+                        {a.masarEmployee && (
+                          <span className="text-xs text-slate-500">
+                            👤 {a.masarEmployee}
+                          </span>
+                        )}
+                      </div>
                     ) : (
                       <span className="text-slate-400">no</span>
                     )}
@@ -204,6 +211,7 @@ function BulkImportPanel({
       phone: string;
       country: string;
       applied: string;
+      masarEmployee: string;
     }[]
   ) => Promise<void>;
   onCancel: () => void;
@@ -212,9 +220,9 @@ function BulkImportPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,Country,Applied with us\n" +
-      "Example Person,90001234,UK,MASAR\n" +
-      "Someone Else,90005678,USA,\n";
+      "Name,Phone,Country,Applied with us,MASAR Employee\n" +
+      "Example Person,90001234,UK,MASAR,Ahmad Dashti\n" +
+      "Someone Else,90005678,USA,,\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -239,6 +247,7 @@ function BulkImportPanel({
         phone: string;
         country: string;
         applied: string;
+        masarEmployee: string;
       }[] = [];
       let skipped = 0;
       for (const r of rows) {
@@ -247,11 +256,13 @@ function BulkImportPanel({
         const country = (r[2] ?? "").trim();
         // Applied-with-us column: anything filled in => MASAR, blank => no.
         const applied = (r[3] ?? "").trim() ? "MASAR" : "no";
+        // Employee name only kept when they applied with us.
+        const masarEmployee = applied === "MASAR" ? (r[4] ?? "").trim() : "";
         if (!name && !phone) {
           skipped++;
           continue;
         }
-        valid.push({ name, phone, country, applied });
+        valid.push({ name, phone, country, applied, masarEmployee });
       }
       if (valid.length) await onImport(valid);
       setResult(
@@ -268,10 +279,15 @@ function BulkImportPanel({
       <h3 className="font-semibold text-slate-800">Bulk import attendees</h3>
       <p className="text-sm text-slate-500">
         Download the template, fill it in (columns:{" "}
-        <span className="font-medium">Name, Phone, Country, Applied with us</span>
+        <span className="font-medium">
+          Name, Phone, Country, Applied with us, MASAR Employee
+        </span>
         ), then upload it. A row needs at least a Name or a Phone. In the{" "}
         <span className="font-medium">Applied with us</span> column, put anything
-        (e.g. MASAR) if they applied with us — leave it blank if not.
+        (e.g. MASAR) if they applied with us — leave it blank if not. Put the
+        helping employee&apos;s name in{" "}
+        <span className="font-medium">MASAR Employee</span> (only used when they
+        applied with us).
       </p>
       <div className="flex flex-wrap items-center gap-3">
         <button
@@ -310,6 +326,7 @@ function AddAttendeeForm({
     phone: string;
     country: string;
     applied: string;
+    masarEmployee: string;
   }) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -317,6 +334,7 @@ function AddAttendeeForm({
   const [phone, setPhone] = useState("");
   const [country, setCountry] = useState("");
   const [applied, setApplied] = useState(false);
+  const [masarEmployee, setMasarEmployee] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -329,6 +347,7 @@ function AddAttendeeForm({
         phone: phone.trim(),
         country: country.trim(),
         applied: applied ? "MASAR" : "no",
+        masarEmployee: applied ? masarEmployee.trim() : "",
       });
     } catch (e) {
       setError((e as Error).message);
@@ -384,6 +403,19 @@ function AddAttendeeForm({
         />
         Applied with us (MASAR)
       </label>
+
+      {applied && (
+        <label className="block max-w-xs">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            MASAR employee (who helped)
+          </span>
+          <input
+            value={masarEmployee}
+            onChange={(e) => setMasarEmployee(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+        </label>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

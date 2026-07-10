@@ -11,6 +11,7 @@ export type Attendee = {
   country: string;
   attended: boolean;
   applied: string; // "MASAR" | "no"
+  masarEmployee: string; // employee who helped (only meaningful when MASAR)
 };
 
 type Row = {
@@ -20,6 +21,7 @@ type Row = {
   country: string;
   attended: boolean;
   applied: string;
+  masar_employee: string;
 };
 
 function fromRow(r: Row): Attendee {
@@ -30,6 +32,7 @@ function fromRow(r: Row): Attendee {
     country: r.country,
     attended: r.attended ?? false,
     applied: r.applied ?? "no",
+    masarEmployee: r.masar_employee ?? "",
   };
 }
 
@@ -68,10 +71,17 @@ export function useAttendees() {
       phone: string;
       country: string;
       applied: string;
+      masarEmployee: string;
     }) => {
       const { data: rows, error } = await supabase
         .from("meeting_attendees")
-        .insert(data)
+        .insert({
+          name: data.name,
+          phone: data.phone,
+          country: data.country,
+          applied: data.applied,
+          masar_employee: data.masarEmployee,
+        })
         .select();
       if (error) throw new Error(error.message);
       if (rows?.[0])
@@ -87,13 +97,21 @@ export function useAttendees() {
         phone: string;
         country: string;
         applied: string;
+        masarEmployee: string;
       }[]
     ) => {
       const chunk = 500;
-      for (let i = 0; i < list.length; i += chunk) {
+      const mapped = list.map((d) => ({
+        name: d.name,
+        phone: d.phone,
+        country: d.country,
+        applied: d.applied,
+        masar_employee: d.masarEmployee,
+      }));
+      for (let i = 0; i < mapped.length; i += chunk) {
         await supabase
           .from("meeting_attendees")
-          .insert(list.slice(i, i + chunk));
+          .insert(mapped.slice(i, i + chunk));
       }
       await refetch();
     },
