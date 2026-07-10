@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRole } from "@/components/role-context";
 import { supabase } from "@/lib/supabase";
+import { MeetingTable } from "@/components/meeting-table";
 
 async function authHeader() {
   const {
@@ -97,11 +98,7 @@ export function AnnualMeeting() {
   return (
     <div className="space-y-6">
       {isAdmin && <AdminPasswordControl />}
-      <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-sm text-slate-500">
-          Nothing here yet — tell me what this page should do.
-        </p>
-      </div>
+      <MeetingTable />
     </div>
   );
 }
