@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uid } from "@/lib/uid";
 
@@ -46,9 +46,25 @@ function fromRow(r: Row): Attendee {
 }
 
 // Cloud-backed list of people attending the annual meeting.
-export function useAttendees() {
+// `actor` is the logged-in user, recorded in the activity log for each action.
+export function useAttendees(actor: { id: string; name: string }) {
   const [attendees, setAttendees] = useState<Attendee[]>([]);
   const [loaded, setLoaded] = useState(false);
+  // Keep the latest list so mutations can look up a person's name to log.
+  const attendeesRef = useRef<Attendee[]>([]);
+  attendeesRef.current = attendees;
+
+  const log = useCallback(
+    async (action: string, detail: string) => {
+      await supabase.from("activity_log").insert({
+        user_id: actor.id,
+        user_name: actor.name,
+        action,
+        detail,
+      });
+    },
+    [actor.id, actor.name]
+  );
 
   const refetch = useCallback(async () => {
     const { data } = await supabase
@@ -101,8 +117,9 @@ export function useAttendees() {
       if (error) throw new Error(error.message);
       if (rows?.[0])
         setAttendees((prev) => [...prev, fromRow(rows[0] as Row)]);
+      await log("Added person", data.name || data.phone || "—");
     },
-    []
+    [log]
   );
 
   const addMany = useCallback(
@@ -135,8 +152,9 @@ export function useAttendees() {
           .insert(mapped.slice(i, i + chunk));
       }
       await refetch();
+      await log("Bulk import", `${list.length} people`);
     },
-    [refetch]
+    [refetch, log]
   );
 
   const update = useCallback(
@@ -144,15 +162,112 @@ export function useAttendees() {
       setAttendees((prev) =>
         prev.map((a) => (a.id === id ? { ...a, ...patch } : a))
       );
-      await supabase.from("meeting_attendees").update(patch).eq("id", id);
+      await supabase.from("meeting_attendees").update(toDb(patch)).eq("id", id);
+      const person = attendeesRef.current.find((a) => a.id === id);
+      const who = person?.name || person?.phone || "someone";
+      const { action, detail } = describeUpdate(patch, who);
+      await log(action, detail);
     },
-    []
+    [log]
   );
 
-  const remove = useCallback(async (id: string) => {
-    setAttendees((prev) => prev.filter((a) => a.id !== id));
-    await supabase.from("meeting_attendees").delete().eq("id", id);
-  }, []);
+  const remove = useCallback(
+    async (id: string) => {
+      const person = attendeesRef.current.find((a) => a.id === id);
+      const who = person?.name || person?.phone || "someone";
+      setAttendees((prev) => prev.filter((a) => a.id !== id));
+      await supabase.from("meeting_attendees").delete().eq("id", id);
+      await log("Removed person", who);
+    },
+    [log]
+  );
 
   return { attendees, add, addMany, update, remove, loaded };
+}
+
+export type LogEntry = {
+  id: string;
+  userName: string;
+  action: string;
+  detail: string;
+  createdAt: string;
+};
+
+// Admin activity log for the annual meeting actions (live).
+export function useActivityLog() {
+  const [entries, setEntries] = useState<LogEntry[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("activity_log")
+      .select("id, user_name, action, detail, created_at")
+      .order("created_at", { ascending: false });
+    setEntries(
+      (data ?? []).map((r) => ({
+        id: r.id as string,
+        userName: (r.user_name as string) ?? "",
+        action: (r.action as string) ?? "",
+        detail: (r.detail as string) ?? "",
+        createdAt: (r.created_at as string) ?? "",
+      }))
+    );
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    refetch();
+    const channel = supabase
+      .channel(`activity-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "activity_log" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  return { entries, loaded };
+}
+
+// Map a camelCase attendee patch to the snake_case DB columns.
+function toDb(patch: Partial<Omit<Attendee, "id">>) {
+  const row: Record<string, unknown> = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.phone !== undefined) row.phone = patch.phone;
+  if (patch.country !== undefined) row.country = patch.country;
+  if (patch.applied !== undefined) row.applied = patch.applied;
+  if (patch.masarEmployee !== undefined) row.masar_employee = patch.masarEmployee;
+  if (patch.ielts !== undefined) row.ielts = patch.ielts;
+  if (patch.otherOffice !== undefined) row.other_office = patch.otherOffice;
+  if (patch.attended !== undefined) row.attended = patch.attended;
+  if (patch.ticket !== undefined) row.ticket = patch.ticket;
+  return row;
+}
+
+// A human-readable action + detail for the activity log.
+function describeUpdate(patch: Partial<Omit<Attendee, "id">>, who: string) {
+  if ("attended" in patch)
+    return {
+      action: "Attendance (حضر؟)",
+      detail: `${who}: ${patch.attended ? "attended" : "not attended"}`,
+    };
+  if ("ielts" in patch)
+    return { action: "IELTS", detail: `${who}: ${patch.ielts ? "yes" : "no"}` };
+  if ("otherOffice" in patch)
+    return {
+      action: "Another office",
+      detail: `${who}: ${patch.otherOffice ? "yes" : "no"}`,
+    };
+  if ("ticket" in patch)
+    return {
+      action: "Ticket number",
+      detail: `${who}: #${patch.ticket || "cleared"}`,
+    };
+  if ("applied" in patch)
+    return { action: "Applied with us", detail: `${who}: ${patch.applied}` };
+  return { action: "Edited", detail: who };
 }

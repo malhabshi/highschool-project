@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAttendees } from "@/lib/meeting";
+import { useRole } from "@/components/role-context";
 import { telHref } from "@/lib/phone";
 
 // A person can have 1-3 numbers stored together; split them for display.
@@ -42,7 +43,11 @@ function TicketInput({
 }
 
 export function MeetingTable() {
-  const { attendees, add, addMany, update, remove, loaded } = useAttendees();
+  const { user } = useRole();
+  const { attendees, add, addMany, update, remove, loaded } = useAttendees({
+    id: user.id,
+    name: user.name,
+  });
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState("");
