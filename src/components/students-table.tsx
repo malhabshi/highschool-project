@@ -584,6 +584,9 @@ type BulkRow = {
   tag?: string;
   gender?: string;
   studentNumber?: string;
+  phone2?: string;
+  acceptedCountry?: string;
+  major?: string;
 };
 
 // Normalize a free-text gender cell to "M" | "F" | "N/A".
@@ -614,8 +617,8 @@ function BulkUploadPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,School,Gender,Student Number\n" +
-      "Example Student,90001234,Example School,M,2024001\n";
+      "Name,Phone,Phone 2,School,Gender,Student Number,Accepted Country,Major\n" +
+      "Example Student,90001234,90005678,Example School,M,2024001,UK,Engineering\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -654,9 +657,12 @@ function BulkUploadPanel({
           phone = normPhone(name);
           name = "";
         }
-        const school = (r[2] ?? "").trim();
-        const gender = normGender(r[3] ?? "");
-        const studentNumber = (r[4] ?? "").trim();
+        const phone2 = normPhone(r[2] ?? "");
+        const school = (r[3] ?? "").trim();
+        const gender = normGender(r[4] ?? "");
+        const studentNumber = (r[5] ?? "").trim();
+        const acceptedCountry = (r[6] ?? "").trim();
+        const major = (r[7] ?? "").trim();
         // Only the phone is required; everything else is optional.
         if (!phone) {
           skipped++;
@@ -671,6 +677,9 @@ function BulkUploadPanel({
           tag: listTag,
           gender,
           studentNumber,
+          phone2,
+          acceptedCountry,
+          major,
         });
       }
       if (valid.length) onImport(valid);
@@ -690,7 +699,8 @@ function BulkUploadPanel({
       <p className="text-sm text-slate-500">
         Download the template, fill it in (columns:{" "}
         <span className="font-medium">
-          Name, Phone, School, Gender, Student Number
+          Name, Phone, Phone 2, School, Gender, Student Number, Accepted
+          Country, Major
         </span>
         ), then upload it.{" "}
         <span className="font-medium">Only Phone is required</span> — everything

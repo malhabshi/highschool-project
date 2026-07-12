@@ -22,6 +22,9 @@ export type Student = {
   createdAt?: string;
   gender?: string; // "M" | "F" | "N/A"
   studentNumber?: string; // set for students imported via bulk upload
+  phone2?: string; // optional second phone number
+  acceptedCountry?: string; // country the student was accepted in
+  major?: string;
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -50,6 +53,9 @@ export type Row = {
   created_at: string | null;
   gender: string | null;
   student_number: string | null;
+  phone2: string | null;
+  accepted_country: string | null;
+  major: string | null;
 };
 
 export function fromRow(r: Row): Student {
@@ -70,6 +76,9 @@ export function fromRow(r: Row): Student {
     createdAt: r.created_at ?? undefined,
     gender: r.gender ?? "N/A",
     studentNumber: r.student_number ?? undefined,
+    phone2: r.phone2 ?? "",
+    acceptedCountry: r.accepted_country ?? "",
+    major: r.major ?? "",
   };
 }
 
@@ -92,6 +101,10 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
   if (patch.gender !== undefined) row.gender = patch.gender ?? null;
   if (patch.studentNumber !== undefined)
     row.student_number = patch.studentNumber ?? null;
+  if (patch.phone2 !== undefined) row.phone2 = patch.phone2 ?? "";
+  if (patch.acceptedCountry !== undefined)
+    row.accepted_country = patch.acceptedCountry ?? "";
+  if (patch.major !== undefined) row.major = patch.major ?? "";
   return row;
 }
 

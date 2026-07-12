@@ -47,8 +47,11 @@ export function StudentProfile({ id }: { id: string }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [phone2, setPhone2] = useState("");
   const [school, setSchool] = useState("");
   const [gender, setGender] = useState("N/A");
+  const [acceptedCountry, setAcceptedCountry] = useState("");
+  const [major, setMajor] = useState("");
   const [error, setError] = useState("");
 
   // Notes is edited locally and saved on blur (so live updates don't interrupt typing).
@@ -96,8 +99,11 @@ export function StudentProfile({ id }: { id: string }) {
     if (!student) return;
     setName(student.name);
     setPhone(student.phone);
+    setPhone2(student.phone2 ?? "");
     setSchool(student.school);
     setGender(student.gender ?? "N/A");
+    setAcceptedCountry(student.acceptedCountry ?? "");
+    setMajor(student.major ?? "");
     setError("");
     setEditing(true);
   }
@@ -110,8 +116,11 @@ export function StudentProfile({ id }: { id: string }) {
     update(student.id, {
       name: name.trim(),
       phone,
+      phone2: phone2.replace(/\D/g, ""),
       school: school.trim(),
       gender,
+      acceptedCountry: acceptedCountry.trim(),
+      major: major.trim(),
     });
     setEditing(false);
   }
@@ -200,6 +209,17 @@ export function StudentProfile({ id }: { id: string }) {
               >
                 {student.phone}
               </a>
+              {student.phone2 && (
+                <>
+                  {" · "}
+                  <a
+                    href={telHref(student.phone2)}
+                    className="text-blue-600 hover:underline"
+                  >
+                    {student.phone2}
+                  </a>
+                </>
+              )}
             </p>
             <p className="text-sm text-slate-500">
               Assigned to {nameOf(users, student.assignedTo)}
@@ -262,6 +282,20 @@ export function StudentProfile({ id }: { id: string }) {
                   {student.gender ?? "N/A"}
                 </dd>
               </div>
+              {student.acceptedCountry && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate-500">Accepted in</dt>
+                  <dd className="font-medium text-slate-800">
+                    {student.acceptedCountry}
+                  </dd>
+                </div>
+              )}
+              {student.major && (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-slate-500">Major</dt>
+                  <dd className="font-medium text-slate-800">{student.major}</dd>
+                </div>
+              )}
             </dl>
 
             {/* Delete / deletion request */}
@@ -319,6 +353,16 @@ export function StudentProfile({ id }: { id: string }) {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
               />
             </Field>
+            <Field label="Phone number 2 (optional)">
+              <input
+                value={phone2}
+                inputMode="numeric"
+                onChange={(e) =>
+                  setPhone2(e.target.value.replace(/\D/g, "").slice(0, 8))
+                }
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              />
+            </Field>
             <Field label="School name">
               <input
                 value={school}
@@ -336,6 +380,22 @@ export function StudentProfile({ id }: { id: string }) {
                 <option value="F">F</option>
                 <option value="N/A">N/A</option>
               </select>
+            </Field>
+            <Field label="Accepted in (country)">
+              <input
+                value={acceptedCountry}
+                onChange={(e) => setAcceptedCountry(e.target.value)}
+                placeholder="e.g. UK, USA, Australia…"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              />
+            </Field>
+            <Field label="Major">
+              <input
+                value={major}
+                onChange={(e) => setMajor(e.target.value)}
+                placeholder="e.g. Engineering, Business…"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+              />
             </Field>
 
             {error && <p className="text-sm text-red-600">{error}</p>}

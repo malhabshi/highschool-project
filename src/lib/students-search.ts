@@ -172,6 +172,9 @@ export function useStudentMutations() {
         tag?: string;
         gender?: string;
         studentNumber?: string;
+        phone2?: string;
+        acceptedCountry?: string;
+        major?: string;
       }[]
     ) => {
       // Insert in chunks so very large uploads don't exceed request limits.
@@ -186,6 +189,9 @@ export function useStudentMutations() {
             tag: d.tag ?? null,
             gender: d.gender ?? "N/A",
             student_number: d.studentNumber ?? null,
+            phone2: d.phone2 ?? "",
+            accepted_country: d.acceptedCountry ?? "",
+            major: d.major ?? "",
           }))
         );
       }
