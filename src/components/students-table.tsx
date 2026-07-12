@@ -44,6 +44,7 @@ export function StudentsTable() {
   const [assignFilter, setAssignFilter] = useState("any");
   const [schoolFilter, setSchoolFilter] = useState("any");
   const [majorFilter, setMajorFilter] = useState("any");
+  const [countryFilter, setCountryFilter] = useState("any");
   const [genderFilter, setGenderFilter] = useState("any");
   const [listFilter, setListFilter] = useState("any");
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -69,6 +70,7 @@ export function StudentsTable() {
     assignFilter,
     schoolFilter,
     majorFilter,
+    countryFilter,
     genderFilter,
     listFilter,
     search,
@@ -99,6 +101,7 @@ export function StudentsTable() {
         : null,
     school: schoolFilter === "any" ? null : schoolFilter,
     major: majorFilter === "any" ? null : majorFilter,
+    country: countryFilter === "any" ? null : countryFilter,
     gender: genderFilter === "any" ? null : genderFilter,
     tag: listFilter === "any" ? null : listFilter,
     yesno,
@@ -112,7 +115,10 @@ export function StudentsTable() {
   };
 
   const { rows, dupIds, total, loading, refetch } = useStudentSearch(params);
-  const { schools, majors, tags } = useStudentFacets(isAdmin, user.id);
+  const { schools, majors, countries, tags } = useStudentFacets(
+    isAdmin,
+    user.id
+  );
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const current = Math.min(page, totalPages);
@@ -309,6 +315,15 @@ export function StudentsTable() {
           options={[
             { v: "any", l: "Any" },
             ...majors.map((m) => ({ v: m, l: m })),
+          ]}
+        />
+        <FilterSelect
+          label="Accepted in"
+          value={countryFilter}
+          onChange={setCountryFilter}
+          options={[
+            { v: "any", l: "Any" },
+            ...countries.map((c) => ({ v: c, l: c })),
           ]}
         />
         <FilterSelect

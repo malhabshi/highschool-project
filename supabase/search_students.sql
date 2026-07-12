@@ -1,7 +1,7 @@
 -- Server-side paginated/filtered/sorted student search.
--- (Drop old signatures first since we added the p_major parameter.)
-drop function if exists search_students(text,text,uuid,text,text,text,jsonb,jsonb,text,text,boolean,uuid,int,int);
-drop function if exists search_student_ids(text,text,uuid,text,text,text,jsonb,jsonb,boolean,uuid);
+-- (Drop old signatures first since we add parameters over time.)
+drop function if exists search_students(text,text,uuid,text,text,text,text,jsonb,jsonb,text,text,boolean,uuid,int,int);
+drop function if exists search_student_ids(text,text,uuid,text,text,text,text,jsonb,jsonb,boolean,uuid);
 
 create or replace function search_students(
   p_search text default '',
@@ -9,6 +9,7 @@ create or replace function search_students(
   p_assigned uuid default null,
   p_school text default null,
   p_major text default null,
+  p_country text default null,
   p_gender text default null,
   p_tag text default null,
   p_yesno jsonb default '{}'::jsonb,     -- { questionId: 'true' | 'false' }
@@ -43,6 +44,7 @@ as $$
       )
       and (p_school is null or s.school = p_school)
       and (p_major is null or coalesce(s.major, '') = p_major)
+      and (p_country is null or coalesce(s.accepted_country, '') = p_country)
       and (p_gender is null or coalesce(s.gender, 'N/A') = p_gender)
       and (p_tag is null or coalesce(s.tag, '') = p_tag)
       and not exists (
@@ -83,6 +85,7 @@ create or replace function search_student_ids(
   p_assigned uuid default null,
   p_school text default null,
   p_major text default null,
+  p_country text default null,
   p_gender text default null,
   p_tag text default null,
   p_yesno jsonb default '{}'::jsonb,
@@ -112,6 +115,7 @@ as $$
     )
     and (p_school is null or s.school = p_school)
     and (p_major is null or coalesce(s.major, '') = p_major)
+    and (p_country is null or coalesce(s.accepted_country, '') = p_country)
     and (p_gender is null or coalesce(s.gender, 'N/A') = p_gender)
     and (p_tag is null or coalesce(s.tag, '') = p_tag)
     and not exists (
@@ -126,7 +130,7 @@ $$;
 
 grant execute on function search_student_ids to anon, authenticated;
 
--- Distinct school names, majors, and list tags for the filter dropdowns.
+-- Distinct schools, majors, accepted countries, and list tags for filters.
 create or replace function student_facets(
   p_admin boolean default true,
   p_user uuid default null
@@ -150,6 +154,13 @@ as $$
       where (source is null or source <> 'my-students')
         and (p_admin or assigned_to = p_user)
         and coalesce(major, '') <> ''
+    ), '[]'::jsonb),
+    'countries', coalesce((
+      select jsonb_agg(distinct accepted_country order by accepted_country)
+      from students
+      where (source is null or source <> 'my-students')
+        and (p_admin or assigned_to = p_user)
+        and coalesce(accepted_country, '') <> ''
     ), '[]'::jsonb),
     'tags', coalesce((
       select jsonb_agg(distinct tag order by tag)

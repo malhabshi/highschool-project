@@ -12,6 +12,7 @@ export type SearchParams = {
   assigned: string | null; // employee id when assignMode = "employee"
   school: string | null;
   major: string | null;
+  country: string | null;
   gender: string | null;
   tag: string | null;
   yesno: Record<string, string>; // questionId -> "true" | "false"
@@ -31,6 +32,7 @@ function rpcArgs(p: SearchParams) {
     p_assigned: p.assignMode === "employee" ? p.assigned : null,
     p_school: p.school,
     p_major: p.major,
+    p_country: p.country,
     p_gender: p.gender,
     p_tag: p.tag,
     p_yesno: p.yesno,
@@ -122,6 +124,7 @@ export function useStudentSearch(params: SearchParams) {
 export function useStudentFacets(admin: boolean, userId: string) {
   const [schools, setSchools] = useState<string[]>([]);
   const [majors, setMajors] = useState<string[]>([]);
+  const [countries, setCountries] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
 
   useEffect(() => {
@@ -134,6 +137,7 @@ export function useStudentFacets(admin: boolean, userId: string) {
       if (!active || !data) return;
       setSchools((data.schools ?? []) as string[]);
       setMajors((data.majors ?? []) as string[]);
+      setCountries((data.countries ?? []) as string[]);
       setTags((data.tags ?? []) as string[]);
     })();
     return () => {
@@ -141,7 +145,7 @@ export function useStudentFacets(admin: boolean, userId: string) {
     };
   }, [admin, userId]);
 
-  return { schools, majors, tags };
+  return { schools, majors, countries, tags };
 }
 
 // Direct DB mutations (no local list; the caller refetches the page after).
