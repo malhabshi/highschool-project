@@ -43,6 +43,7 @@ export function StudentsTable() {
   const [search, setSearch] = useState(""); // debounced
   const [assignFilter, setAssignFilter] = useState("any");
   const [schoolFilter, setSchoolFilter] = useState("any");
+  const [majorFilter, setMajorFilter] = useState("any");
   const [genderFilter, setGenderFilter] = useState("any");
   const [listFilter, setListFilter] = useState("any");
   const [filters, setFilters] = useState<Record<string, string>>({});
@@ -64,7 +65,15 @@ export function StudentsTable() {
   // Reset to page 1 when a filter/search changes.
   useEffect(() => {
     setPage(1);
-  }, [assignFilter, schoolFilter, genderFilter, listFilter, search, filters]);
+  }, [
+    assignFilter,
+    schoolFilter,
+    majorFilter,
+    genderFilter,
+    listFilter,
+    search,
+    filters,
+  ]);
 
   // Translate the question filters into the yes/no + multi maps the server wants.
   const yesno: Record<string, string> = {};
@@ -89,6 +98,7 @@ export function StudentsTable() {
         ? assignFilter
         : null,
     school: schoolFilter === "any" ? null : schoolFilter,
+    major: majorFilter === "any" ? null : majorFilter,
     gender: genderFilter === "any" ? null : genderFilter,
     tag: listFilter === "any" ? null : listFilter,
     yesno,
@@ -102,7 +112,7 @@ export function StudentsTable() {
   };
 
   const { rows, dupIds, total, loading, refetch } = useStudentSearch(params);
-  const { schools, tags } = useStudentFacets(isAdmin, user.id);
+  const { schools, majors, tags } = useStudentFacets(isAdmin, user.id);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const current = Math.min(page, totalPages);
@@ -290,6 +300,15 @@ export function StudentsTable() {
           options={[
             { v: "any", l: "Any" },
             ...schools.map((sc) => ({ v: sc, l: sc })),
+          ]}
+        />
+        <FilterSelect
+          label="Major"
+          value={majorFilter}
+          onChange={setMajorFilter}
+          options={[
+            { v: "any", l: "Any" },
+            ...majors.map((m) => ({ v: m, l: m })),
           ]}
         />
         <FilterSelect

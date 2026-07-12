@@ -1,10 +1,14 @@
 -- Server-side paginated/filtered/sorted student search.
--- Returns one page of rows (as jsonb), a duplicate flag, and the total match count.
+-- (Drop old signatures first since we added the p_major parameter.)
+drop function if exists search_students(text,text,uuid,text,text,text,jsonb,jsonb,text,text,boolean,uuid,int,int);
+drop function if exists search_student_ids(text,text,uuid,text,text,text,jsonb,jsonb,boolean,uuid);
+
 create or replace function search_students(
   p_search text default '',
   p_assigned_mode text default 'any',   -- 'any' | 'unassigned' | 'employee'
   p_assigned uuid default null,
   p_school text default null,
+  p_major text default null,
   p_gender text default null,
   p_tag text default null,
   p_yesno jsonb default '{}'::jsonb,     -- { questionId: 'true' | 'false' }
@@ -38,6 +42,7 @@ as $$
         or s.phone ilike '%' || p_search || '%'
       )
       and (p_school is null or s.school = p_school)
+      and (p_major is null or coalesce(s.major, '') = p_major)
       and (p_gender is null or coalesce(s.gender, 'N/A') = p_gender)
       and (p_tag is null or coalesce(s.tag, '') = p_tag)
       and not exists (
@@ -77,6 +82,7 @@ create or replace function search_student_ids(
   p_assigned_mode text default 'any',
   p_assigned uuid default null,
   p_school text default null,
+  p_major text default null,
   p_gender text default null,
   p_tag text default null,
   p_yesno jsonb default '{}'::jsonb,
@@ -105,6 +111,7 @@ as $$
       or s.phone ilike '%' || p_search || '%'
     )
     and (p_school is null or s.school = p_school)
+    and (p_major is null or coalesce(s.major, '') = p_major)
     and (p_gender is null or coalesce(s.gender, 'N/A') = p_gender)
     and (p_tag is null or coalesce(s.tag, '') = p_tag)
     and not exists (
@@ -119,7 +126,7 @@ $$;
 
 grant execute on function search_student_ids to anon, authenticated;
 
--- Distinct school names and list tags for the filter dropdowns.
+-- Distinct school names, majors, and list tags for the filter dropdowns.
 create or replace function student_facets(
   p_admin boolean default true,
   p_user uuid default null
@@ -136,6 +143,13 @@ as $$
       where (source is null or source <> 'my-students')
         and (p_admin or assigned_to = p_user)
         and coalesce(school, '') <> ''
+    ), '[]'::jsonb),
+    'majors', coalesce((
+      select jsonb_agg(distinct major order by major)
+      from students
+      where (source is null or source <> 'my-students')
+        and (p_admin or assigned_to = p_user)
+        and coalesce(major, '') <> ''
     ), '[]'::jsonb),
     'tags', coalesce((
       select jsonb_agg(distinct tag order by tag)
