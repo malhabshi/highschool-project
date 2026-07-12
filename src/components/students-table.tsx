@@ -358,6 +358,8 @@ export function StudentsTable() {
                 <th className="px-5 py-3 font-medium">Student</th>
                 <th className="px-5 py-3 font-medium">Phone</th>
                 <th className="px-5 py-3 font-medium">School</th>
+                <th className="px-5 py-3 font-medium">Accepted in</th>
+                <th className="px-5 py-3 font-medium">Major</th>
                 {isAdmin && (
                   <th className="px-5 py-3 font-medium">Assigned To</th>
                 )}
@@ -425,6 +427,12 @@ export function StudentsTable() {
                     </td>
                     <td className="px-5 py-3 text-slate-600">
                       {s.school || "—"}
+                    </td>
+                    <td className="px-5 py-3 text-slate-600">
+                      {s.acceptedCountry || "—"}
+                    </td>
+                    <td className="px-5 py-3 text-slate-600">
+                      {s.major || "—"}
                     </td>
                     {isAdmin && (
                       <td className="px-5 py-3 text-slate-600">
