@@ -49,12 +49,15 @@ export function LuckyDraw() {
     timers.current.forEach(clearTimeout);
     timers.current = [];
 
-    // Shuffle: flash random names, slowing down toward the end.
+    // The winner is chosen only from the filtered pool...
     const finalPick = pool[Math.floor(Math.random() * pool.length)];
+    // ...but during the ~5s shuffle we flash EVERY attendee's name (ignoring
+    // the filters), slowing down toward the end.
+    const shuffleNames = attendees.length ? attendees : pool;
     let elapsed = 0;
-    const total = 2600;
+    const total = 5000;
     const tick = () => {
-      setDisplay(pool[Math.floor(Math.random() * pool.length)]);
+      setDisplay(shuffleNames[Math.floor(Math.random() * shuffleNames.length)]);
       elapsed += 70 + Math.floor(elapsed / 600) * 40; // gradually slower
       if (elapsed < total) {
         timers.current.push(setTimeout(tick, 70 + Math.floor(elapsed / 600) * 40));
