@@ -23,6 +23,36 @@ export function LuckyDraw() {
   const [winner, setWinner] = useState<Attendee | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // Full-screen presentation mode (for the big screen).
+  const [presenting, setPresenting] = useState(false);
+
+  async function enterFullscreen() {
+    setPresenting(true);
+    try {
+      await document.documentElement.requestFullscreen?.();
+    } catch {
+      // Native fullscreen may be blocked; the overlay still covers the screen.
+    }
+  }
+
+  async function exitFullscreen() {
+    setPresenting(false);
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen?.();
+    } catch {
+      // ignore
+    }
+  }
+
+  // Keep our state in sync if the user leaves fullscreen with Esc.
+  useEffect(() => {
+    const onChange = () => {
+      if (!document.fullscreenElement) setPresenting(false);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
   // Everyone eligible for the *next* draw (based on the saved settings).
   const pool = useMemo(() => {
     const include = new Set(settings.countries);
@@ -92,6 +122,7 @@ export function LuckyDraw() {
   }
 
   return (
+    <>
     <div className="space-y-6">
       {/* Stage */}
       <div className="relative flex min-h-[16rem] flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-center text-white shadow-sm">
@@ -134,6 +165,12 @@ export function LuckyDraw() {
         >
           {rolling ? "Drawing…" : winner ? "🎲 Draw again" : "🎲 Draw a winner"}
         </button>
+        <button
+          onClick={enterFullscreen}
+          className="rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+        >
+          ⛶ Full screen
+        </button>
         {winners.length > 0 && (
           <button
             onClick={reset}
@@ -174,5 +211,72 @@ export function LuckyDraw() {
         </div>
       )}
     </div>
+
+    {/* Full-screen presentation overlay */}
+    {presenting && (
+      <div className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-6 py-4">
+          <span className="text-lg font-semibold text-blue-100">
+            🎲 Lucky Draw · {pool.length} in the draw
+          </span>
+          <button
+            onClick={exitFullscreen}
+            className="rounded-lg bg-white/15 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/25"
+          >
+            ✕ Exit full screen
+          </button>
+        </div>
+
+        {/* Center stage */}
+        <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+          {pool.length === 0 && !rolling ? (
+            <p className="text-2xl text-blue-50">
+              No eligible people to draw. Adjust the filters in Settings.
+            </p>
+          ) : (
+            <>
+              <p className="mb-6 text-xl uppercase tracking-[0.3em] text-blue-200 sm:text-2xl">
+                {rolling ? "Drawing…" : winner ? "🎉 Winner 🎉" : "Ready to draw"}
+              </p>
+              <div
+                className={`px-4 text-6xl font-extrabold leading-tight sm:text-8xl ${
+                  rolling ? "opacity-80 blur-[2px]" : ""
+                } ${winner ? "animate-pulse" : ""}`}
+                dir="auto"
+              >
+                {display ? display.name || "—" : "🎲"}
+              </div>
+              {winner && !rolling && (
+                <div className="mt-8 text-4xl font-semibold text-blue-50 sm:text-5xl" dir="ltr">
+                  🎟️ Ticket #{winner.ticket || "—"}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* Bottom controls */}
+        <div className="flex items-center justify-center gap-4 px-6 py-8">
+          <button
+            onClick={draw}
+            disabled={rolling || pool.length === 0}
+            className="rounded-2xl bg-white px-12 py-5 text-2xl font-bold text-blue-700 shadow-lg transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
+          >
+            {rolling ? "Drawing…" : winner ? "🎲 Draw again" : "🎲 Draw a winner"}
+          </button>
+          {winners.length > 0 && (
+            <button
+              onClick={reset}
+              disabled={rolling}
+              className="rounded-2xl border border-white/40 px-6 py-5 text-lg font-medium text-white transition-colors hover:bg-white/10 disabled:opacity-50"
+            >
+              Clear ({winners.length})
+            </button>
+          )}
+        </div>
+      </div>
+    )}
+    </>
   );
 }
