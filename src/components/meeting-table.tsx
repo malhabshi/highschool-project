@@ -437,8 +437,11 @@ function BulkImportPanel({
         const phone = joinPhones(r[1] ?? "", r[2] ?? "", r[3] ?? "");
         const country = (r[4] ?? "").trim();
         const major = (r[5] ?? "").trim();
-        // Applied-with-us column: anything filled in => MASAR, blank => no.
-        const applied = (r[6] ?? "").trim() ? "MASAR" : "no";
+        // Applied-with-us column: counts as MASAR only if it contains the word
+        // "MASAR" (case-insensitive). Anything else => not MASAR.
+        const applied = (r[6] ?? "").toLowerCase().includes("masar")
+          ? "MASAR"
+          : "no";
         // Employee name only kept when they applied with us.
         const masarEmployee = applied === "MASAR" ? (r[7] ?? "").trim() : "";
         const ielts = yes.has((r[8] ?? "").trim().toLowerCase());
@@ -482,9 +485,10 @@ function BulkImportPanel({
         ), then upload it. Each person can have up to 3 numbers (Phone, Phone 2,
         Phone 3). A row needs at least a Name or a Phone. For IELTS and Another
         office, write yes or leave blank/no. In the{" "}
-        <span className="font-medium">Applied with us</span> column, put anything
-        (e.g. MASAR) if they applied with us — leave it blank if not. Put the
-        helping employee&apos;s name in{" "}
+        <span className="font-medium">Applied with us</span> column, write{" "}
+        <span className="font-medium">MASAR</span> if they applied with us —
+        anything else (or blank) counts as not with MASAR. Put the helping
+        employee&apos;s name in{" "}
         <span className="font-medium">MASAR Employee</span> (only used when they
         applied with us). For <span className="font-medium">IELTS</span>, write
         yes or leave blank/no.
