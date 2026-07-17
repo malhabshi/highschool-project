@@ -1,8 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uid } from "@/lib/uid";
+
+// Extract the normalized 8-digit numbers from an attendee's phone field
+// (which may hold 1-3 numbers joined together, possibly with a country code).
+export function normalizedPhones(raw: string): string[] {
+  return (raw.match(/\d+/g) ?? [])
+    .map((d) => (d.length > 8 ? d.slice(-8) : d))
+    .filter((d) => d.length === 8);
+}
 
 export type Attendee = {
   id: string;
@@ -175,7 +183,11 @@ export function useAttendees(actor: { id: string; name: string }) {
   );
 
   const update = useCallback(
-    async (id: string, patch: Partial<Omit<Attendee, "id">>) => {
+    async (
+      id: string,
+      patch: Partial<Omit<Attendee, "id">>,
+      note?: string // extra text appended to the log detail (e.g. assigned user)
+    ) => {
       setAttendees((prev) =>
         prev.map((a) => (a.id === id ? { ...a, ...patch } : a))
       );
@@ -183,7 +195,7 @@ export function useAttendees(actor: { id: string; name: string }) {
       const person = attendeesRef.current.find((a) => a.id === id);
       const who = person?.name || person?.phone || "someone";
       const { action, detail } = describeUpdate(patch, who);
-      await log(action, detail);
+      await log(action, note ? `${detail} · ${note}` : detail);
     },
     [log]
   );
@@ -211,6 +223,73 @@ export function useAttendees(actor: { id: string; name: string }) {
   }, [log]);
 
   return { attendees, add, addMany, update, remove, removeAll, loaded };
+}
+
+// For each attendee (matched by phone), the student record + account owner.
+export type AttendeeMatch = {
+  assignedName: string; // account user the student is assigned to ("" if none)
+  studentName: string;
+};
+
+// Looks up which students (by phone) the attendees correspond to, and who they
+// are assigned to in the account. Returns a map: normalized phone -> match.
+export function useAttendeeAssignments(attendees: Attendee[]) {
+  const [map, setMap] = useState<Map<string, AttendeeMatch>>(new Map());
+
+  // A stable key of every distinct normalized phone across all attendees.
+  const phonesKey = useMemo(() => {
+    const set = new Set<string>();
+    for (const a of attendees)
+      for (const p of normalizedPhones(a.phone)) set.add(p);
+    return [...set].sort().join(",");
+  }, [attendees]);
+
+  useEffect(() => {
+    const phones = phonesKey ? phonesKey.split(",") : [];
+    if (phones.length === 0) {
+      setMap(new Map());
+      return;
+    }
+    let active = true;
+    (async () => {
+      const { data } = await supabase.rpc("students_by_phones", {
+        p_phones: phones,
+      });
+      if (!active || !data) return;
+      const m = new Map<string, AttendeeMatch>();
+      for (const r of data as {
+        assigned_name: string | null;
+        student_name: string | null;
+        p1: string | null;
+        p2: string | null;
+      }[]) {
+        const info: AttendeeMatch = {
+          assignedName: r.assigned_name ?? "",
+          studentName: r.student_name ?? "",
+        };
+        if (r.p1) m.set(r.p1, info);
+        if (r.p2 && !m.has(r.p2)) m.set(r.p2, info);
+      }
+      setMap(m);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [phonesKey]);
+
+  // Resolve a single attendee to its match (first phone that hits a student).
+  const matchFor = useCallback(
+    (a: Attendee): AttendeeMatch | null => {
+      for (const p of normalizedPhones(a.phone)) {
+        const hit = map.get(p);
+        if (hit) return hit;
+      }
+      return null;
+    },
+    [map]
+  );
+
+  return { matchFor };
 }
 
 export type LogEntry = {

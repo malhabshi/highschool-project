@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAttendees } from "@/lib/meeting";
+import { useAttendees, useAttendeeAssignments } from "@/lib/meeting";
 import { useRole } from "@/components/role-context";
 import { telHref } from "@/lib/phone";
 
@@ -73,6 +73,8 @@ export function MeetingTable() {
       id: user.id,
       name: user.name,
     });
+  // Match attendees (by phone) to their student record + assigned account user.
+  const { matchFor } = useAttendeeAssignments(attendees);
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -175,7 +177,7 @@ export function MeetingTable() {
         </p>
       ) : (
         <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
-          <table className="w-full min-w-[960px] whitespace-nowrap text-left text-sm">
+          <table className="w-full min-w-[1120px] whitespace-nowrap text-left text-sm">
             <thead className="text-xs uppercase text-slate-500">
               <tr className="border-b border-slate-100">
                 <th className="px-3 py-3 font-medium sm:px-5">Ticket #</th>
@@ -184,6 +186,9 @@ export function MeetingTable() {
                 <th className="px-3 py-3 font-medium sm:px-5">Accepted in</th>
                 <th className="px-3 py-3 font-medium sm:px-5">Major</th>
                 <th className="px-3 py-3 font-medium sm:px-5">Applied with us</th>
+                <th className="px-3 py-3 font-medium sm:px-5">
+                  Assigned to (account)
+                </th>
                 <th
                   className="px-3 py-3 text-center font-medium sm:px-5"
                   dir="rtl"
@@ -209,6 +214,8 @@ export function MeetingTable() {
                 // Red if they applied with another office, or didn't apply with
                 // MASAR. Blue only when it's a clean MASAR applicant.
                 const red = a.otherOffice || a.applied !== "MASAR";
+                // Matching student in the account (by phone) + who owns them.
+                const match = matchFor(a);
                 return (
                 <tr
                   key={a.id}
@@ -281,12 +288,33 @@ export function MeetingTable() {
                       <span className="text-slate-400">no</span>
                     )}
                   </td>
+                  <td className="px-3 py-3 sm:px-5">
+                    {match ? (
+                      match.assignedName ? (
+                        <span className="w-fit rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700">
+                          👤 {match.assignedName}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-amber-600">
+                          student · unassigned
+                        </span>
+                      )
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
                   <td className="px-3 py-3 sm:px-5 text-center">
                     <input
                       type="checkbox"
                       checked={a.attended}
                       onChange={(e) =>
-                        update(a.id, { attended: e.target.checked })
+                        update(
+                          a.id,
+                          { attended: e.target.checked },
+                          e.target.checked && match
+                            ? `assigned to ${match.assignedName || "unassigned"}`
+                            : undefined
+                        )
                       }
                       aria-label="حضر؟"
                       className="h-5 w-5"
