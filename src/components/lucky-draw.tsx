@@ -16,6 +16,8 @@ export function LuckyDraw() {
   const [noRepeat, setNoRepeat] = useState(true);
   // Countries to include (empty = all countries).
   const [countries, setCountries] = useState<Set<string>>(new Set());
+  // Majors to EXCLUDE from the draw (empty = keep everyone).
+  const [excludedMajors, setExcludedMajors] = useState<Set<string>>(new Set());
 
   // Distinct countries found in the attendee list (for the picker).
   const allCountries = useMemo(() => {
@@ -27,10 +29,30 @@ export function LuckyDraw() {
     return [...map.values()].sort((x, y) => x.localeCompare(y));
   }, [attendees]);
 
+  // Distinct majors found in the attendee list (for the exclude picker).
+  const allMajors = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const a of attendees) {
+      const m = (a.major || "").trim();
+      if (m) map.set(m.toLowerCase(), m);
+    }
+    return [...map.values()].sort((x, y) => x.localeCompare(y));
+  }, [attendees]);
+
   function toggleCountry(c: string) {
     setCountries((prev) => {
       const next = new Set(prev);
       const key = c.toLowerCase();
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleMajor(m: string) {
+    setExcludedMajors((prev) => {
+      const next = new Set(prev);
+      const key = m.toLowerCase();
       if (next.has(key)) next.delete(key);
       else next.add(key);
       return next;
@@ -54,9 +76,10 @@ export function LuckyDraw() {
       if (noRepeat && wonIds.has(a.id)) return false;
       if (countries.size > 0 && !countries.has((a.country || "").trim().toLowerCase()))
         return false;
+      if (excludedMajors.has((a.major || "").trim().toLowerCase())) return false;
       return true;
     });
-  }, [attendees, onlyAttended, noRepeat, wonIds, countries]);
+  }, [attendees, onlyAttended, noRepeat, wonIds, countries, excludedMajors]);
 
   // Clean up any running timers on unmount.
   useEffect(() => {
@@ -172,6 +195,52 @@ export function LuckyDraw() {
                     }`}
                   >
                     {c}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Exclude majors */}
+        <div className="w-full border-t border-slate-200 pt-3">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-700">
+              Exclude majors
+            </span>
+            <span className="text-xs text-slate-400">
+              {excludedMajors.size === 0
+                ? "(none excluded)"
+                : `(${excludedMajors.size} excluded)`}
+            </span>
+            {excludedMajors.size > 0 && (
+              <button
+                onClick={() => setExcludedMajors(new Set())}
+                className="ml-auto text-xs font-medium text-blue-600 hover:underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {allMajors.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              No majors found in the attendee list yet.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {allMajors.map((m) => {
+                const off = excludedMajors.has(m.toLowerCase());
+                return (
+                  <button
+                    key={m}
+                    onClick={() => toggleMajor(m)}
+                    className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                      off
+                        ? "bg-red-600 text-white line-through"
+                        : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    {m}
                   </button>
                 );
               })}

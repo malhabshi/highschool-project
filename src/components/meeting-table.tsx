@@ -18,6 +18,29 @@ function joinPhones(...nums: string[]): string {
   return nums.map((n) => n.trim()).filter(Boolean).join(" / ");
 }
 
+// Inline, free-text major field (saves on blur).
+function MajorInput({
+  value,
+  onSave,
+}: {
+  value: string;
+  onSave: (v: string) => void;
+}) {
+  const [v, setV] = useState(value);
+  useEffect(() => setV(value), [value]);
+  return (
+    <input
+      value={v}
+      onChange={(e) => setV(e.target.value)}
+      onBlur={() => {
+        if (v.trim() !== value) onSave(v.trim());
+      }}
+      placeholder="—"
+      className="w-32 rounded-md border border-slate-300 px-2 py-1 text-sm outline-none focus:border-blue-500"
+    />
+  );
+}
+
 // Inline, digits-only ticket-number field (saves on blur).
 function TicketInput({
   value,
@@ -135,13 +158,14 @@ export function MeetingTable() {
         </p>
       ) : (
         <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
-          <table className="w-full min-w-[820px] whitespace-nowrap text-left text-sm">
+          <table className="w-full min-w-[960px] whitespace-nowrap text-left text-sm">
             <thead className="text-xs uppercase text-slate-500">
               <tr className="border-b border-slate-100">
                 <th className="px-3 py-3 font-medium sm:px-5">Ticket #</th>
                 <th className="px-3 py-3 font-medium sm:px-5">Name</th>
                 <th className="px-3 py-3 font-medium sm:px-5">Phone</th>
                 <th className="px-3 py-3 font-medium sm:px-5">Accepted in</th>
+                <th className="px-3 py-3 font-medium sm:px-5">Major</th>
                 <th className="px-3 py-3 font-medium sm:px-5">Applied with us</th>
                 <th
                   className="px-3 py-3 text-center font-medium sm:px-5"
@@ -207,6 +231,12 @@ export function MeetingTable() {
                   </td>
                   <td className="px-3 py-3 sm:px-5 text-slate-600">
                     {a.country || "—"}
+                  </td>
+                  <td className="px-3 py-3 sm:px-5">
+                    <MajorInput
+                      value={a.major}
+                      onSave={(v) => update(a.id, { major: v })}
+                    />
                   </td>
                   <td className="px-3 py-3 sm:px-5">
                     {a.applied === "MASAR" ? (
@@ -325,6 +355,7 @@ function BulkImportPanel({
       ielts: boolean;
       otherOffice: boolean;
       ticket: string;
+      major: string;
     }[]
   ) => Promise<void>;
   onCancel: () => void;
@@ -333,9 +364,9 @@ function BulkImportPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,Phone 2,Phone 3,Country,Applied with us,MASAR Employee,IELTS,Another office,Ticket\n" +
-      "Example Person,90001234,90009999,,UK,MASAR,Ahmad Dashti,yes,no,101\n" +
-      "Someone Else,90005678,,,USA,,,no,yes,\n";
+      "Name,Phone,Phone 2,Phone 3,Country,Major,Applied with us,MASAR Employee,IELTS,Another office,Ticket\n" +
+      "Example Person,90001234,90009999,,UK,Business,MASAR,Ahmad Dashti,yes,no,101\n" +
+      "Someone Else,90005678,,,USA,Engineering,,,no,yes,\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -364,6 +395,7 @@ function BulkImportPanel({
         ielts: boolean;
         otherOffice: boolean;
         ticket: string;
+        major: string;
       }[] = [];
       let skipped = 0;
       const yes = new Set(["yes", "y", "1", "true", "✓", "نعم"]);
@@ -372,13 +404,14 @@ function BulkImportPanel({
         // Up to 3 numbers combined into one field.
         const phone = joinPhones(r[1] ?? "", r[2] ?? "", r[3] ?? "");
         const country = (r[4] ?? "").trim();
+        const major = (r[5] ?? "").trim();
         // Applied-with-us column: anything filled in => MASAR, blank => no.
-        const applied = (r[5] ?? "").trim() ? "MASAR" : "no";
+        const applied = (r[6] ?? "").trim() ? "MASAR" : "no";
         // Employee name only kept when they applied with us.
-        const masarEmployee = applied === "MASAR" ? (r[6] ?? "").trim() : "";
-        const ielts = yes.has((r[7] ?? "").trim().toLowerCase());
-        const otherOffice = yes.has((r[8] ?? "").trim().toLowerCase());
-        const ticket = (r[9] ?? "").replace(/\D/g, "");
+        const masarEmployee = applied === "MASAR" ? (r[7] ?? "").trim() : "";
+        const ielts = yes.has((r[8] ?? "").trim().toLowerCase());
+        const otherOffice = yes.has((r[9] ?? "").trim().toLowerCase());
+        const ticket = (r[10] ?? "").replace(/\D/g, "");
         if (!name && !phone) {
           skipped++;
           continue;
@@ -392,6 +425,7 @@ function BulkImportPanel({
           ielts,
           otherOffice,
           ticket,
+          major,
         });
       }
       if (valid.length) await onImport(valid);
@@ -410,7 +444,7 @@ function BulkImportPanel({
       <p className="text-sm text-slate-500">
         Download the template, fill it in (columns:{" "}
         <span className="font-medium">
-          Name, Phone, Phone 2, Phone 3, Country, Applied with us, MASAR
+          Name, Phone, Phone 2, Phone 3, Country, Major, Applied with us, MASAR
           Employee, IELTS, Another office, Ticket
         </span>
         ), then upload it. Each person can have up to 3 numbers (Phone, Phone 2,
@@ -464,6 +498,7 @@ function AddAttendeeForm({
     ielts: boolean;
     otherOffice: boolean;
     ticket: string;
+    major: string;
   }) => Promise<void>;
   onCancel: () => void;
 }) {
@@ -472,6 +507,7 @@ function AddAttendeeForm({
   const [phone2, setPhone2] = useState("");
   const [phone3, setPhone3] = useState("");
   const [country, setCountry] = useState("");
+  const [major, setMajor] = useState("");
   const [applied, setApplied] = useState(false);
   const [masarEmployee, setMasarEmployee] = useState("");
   const [ielts, setIelts] = useState(false);
@@ -493,6 +529,7 @@ function AddAttendeeForm({
         ielts,
         otherOffice,
         ticket,
+        major: major.trim(),
       });
     } catch (e) {
       setError((e as Error).message);
@@ -551,6 +588,17 @@ function AddAttendeeForm({
             value={country}
             onChange={(e) => setCountry(e.target.value)}
             placeholder="e.g. UK, USA, Australia…"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            Major (accepted in)
+          </span>
+          <input
+            value={major}
+            onChange={(e) => setMajor(e.target.value)}
+            placeholder="e.g. Business, Engineering…"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
           />
         </label>

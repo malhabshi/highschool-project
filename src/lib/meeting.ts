@@ -15,6 +15,7 @@ export type Attendee = {
   ielts: boolean;
   otherOffice: boolean; // applied with another office?
   ticket: string; // ticket number (digits)
+  major: string; // major they were accepted in
 };
 
 type Row = {
@@ -28,6 +29,7 @@ type Row = {
   ielts: boolean;
   other_office: boolean;
   ticket: string;
+  major: string;
 };
 
 function fromRow(r: Row): Attendee {
@@ -42,6 +44,7 @@ function fromRow(r: Row): Attendee {
     ielts: r.ielts ?? false,
     otherOffice: r.other_office ?? false,
     ticket: r.ticket ?? "",
+    major: r.major ?? "",
   };
 }
 
@@ -100,6 +103,7 @@ export function useAttendees(actor: { id: string; name: string }) {
       ielts: boolean;
       otherOffice: boolean;
       ticket: string;
+      major: string;
     }) => {
       const { data: rows, error } = await supabase
         .from("meeting_attendees")
@@ -112,6 +116,7 @@ export function useAttendees(actor: { id: string; name: string }) {
           ielts: data.ielts,
           other_office: data.otherOffice,
           ticket: data.ticket,
+          major: data.major,
         })
         .select();
       if (error) throw new Error(error.message);
@@ -133,6 +138,7 @@ export function useAttendees(actor: { id: string; name: string }) {
         ielts: boolean;
         otherOffice: boolean;
         ticket: string;
+        major: string;
       }[]
     ) => {
       const chunk = 500;
@@ -145,6 +151,7 @@ export function useAttendees(actor: { id: string; name: string }) {
         ielts: d.ielts,
         other_office: d.otherOffice,
         ticket: d.ticket,
+        major: d.major,
       }));
       for (let i = 0; i < mapped.length; i += chunk) {
         await supabase
@@ -245,6 +252,7 @@ function toDb(patch: Partial<Omit<Attendee, "id">>) {
   if (patch.otherOffice !== undefined) row.other_office = patch.otherOffice;
   if (patch.attended !== undefined) row.attended = patch.attended;
   if (patch.ticket !== undefined) row.ticket = patch.ticket;
+  if (patch.major !== undefined) row.major = patch.major;
   return row;
 }
 
@@ -266,6 +274,11 @@ function describeUpdate(patch: Partial<Omit<Attendee, "id">>, who: string) {
     return {
       action: "Ticket number",
       detail: `${who}: #${patch.ticket || "cleared"}`,
+    };
+  if ("major" in patch)
+    return {
+      action: "Major",
+      detail: `${who}: ${patch.major || "cleared"}`,
     };
   if ("applied" in patch)
     return { action: "Applied with us", detail: `${who}: ${patch.applied}` };
