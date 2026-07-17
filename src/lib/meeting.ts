@@ -189,7 +189,18 @@ export function useAttendees(actor: { id: string; name: string }) {
     [log]
   );
 
-  return { attendees, add, addMany, update, remove, loaded };
+  const removeAll = useCallback(async () => {
+    const count = attendeesRef.current.length;
+    setAttendees([]);
+    // Delete every row (a filter is required, so match all real ids).
+    await supabase
+      .from("meeting_attendees")
+      .delete()
+      .not("id", "is", null);
+    await log("Deleted all attendees", `${count} people`);
+  }, [log]);
+
+  return { attendees, add, addMany, update, remove, removeAll, loaded };
 }
 
 export type LogEntry = {
