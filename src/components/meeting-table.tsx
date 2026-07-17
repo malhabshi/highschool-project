@@ -205,20 +205,22 @@ export function MeetingTable() {
               </tr>
             </thead>
             <tbody>
-              {shown.map((a) => (
+              {shown.map((a) => {
+                // Red if they applied with another office, or didn't apply with
+                // MASAR. Blue only when it's a clean MASAR applicant.
+                const red = a.otherOffice || a.applied !== "MASAR";
+                return (
                 <tr
                   key={a.id}
                   className={`border-b border-white last:border-0 ${
-                    a.applied === "MASAR"
-                      ? "bg-blue-100 hover:bg-blue-200"
-                      : "bg-red-100 hover:bg-red-200"
+                    red
+                      ? "bg-red-100 hover:bg-red-200"
+                      : "bg-blue-100 hover:bg-blue-200"
                   }`}
                 >
                   <td
                     className={`border-l-8 px-3 py-3 sm:px-5 ${
-                      a.applied === "MASAR"
-                        ? "border-blue-600"
-                        : "border-red-600"
+                      red ? "border-red-600" : "border-blue-600"
                     }`}
                   >
                     <TicketInput
@@ -227,7 +229,15 @@ export function MeetingTable() {
                     />
                   </td>
                   <td className="px-3 py-3 sm:px-5 font-medium text-slate-800">
-                    {a.name || "—"}
+                    <div>{a.name || "—"}</div>
+                    {a.otherOffice && (
+                      <div
+                        className="mt-1 w-fit rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white"
+                        dir="rtl"
+                      >
+                        ⚠️ مقدم مع مكتب ثاني
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-3 sm:px-5">
                     {splitPhones(a.phone).length > 0 ? (
@@ -320,7 +330,8 @@ export function MeetingTable() {
                     )}
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
