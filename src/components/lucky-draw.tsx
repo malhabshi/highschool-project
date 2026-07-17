@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useAttendees, type Attendee } from "@/lib/meeting";
 import { useDrawSettings } from "@/lib/draw-settings";
@@ -12,7 +11,7 @@ import { supabase } from "@/lib/supabase";
 export function LuckyDraw() {
   const { user } = useRole();
   const { attendees, loaded } = useAttendees({ id: user.id, name: user.name });
-  const { settings, loaded: settingsLoaded } = useDrawSettings();
+  const { settings } = useDrawSettings();
 
   // Winners drawn so far this session (newest first).
   const [winners, setWinners] = useState<Attendee[]>([]);
@@ -37,17 +36,6 @@ export function LuckyDraw() {
       return true;
     });
   }, [attendees, settings, wonIds]);
-
-  // A short description of the active filters.
-  const activeFilters = useMemo(() => {
-    const parts: string[] = [];
-    if (settings.onlyAttended) parts.push("attended only");
-    if (settings.countries.length > 0)
-      parts.push(`${settings.countries.length} country(ies)`);
-    if (settings.excludedMajors.length > 0)
-      parts.push(`${settings.excludedMajors.length} major(s) excluded`);
-    return parts;
-  }, [settings]);
 
   // Clean up any running timers on unmount.
   useEffect(() => {
@@ -100,34 +88,6 @@ export function LuckyDraw() {
 
   return (
     <div className="space-y-6">
-      {/* Filter summary + link to settings */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-        <span className="font-medium text-slate-700">Filters:</span>
-        {settingsLoaded && activeFilters.length === 0 ? (
-          <span className="text-slate-500">everyone included</span>
-        ) : (
-          <div className="flex flex-wrap gap-2">
-            {activeFilters.map((f) => (
-              <span
-                key={f}
-                className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200"
-              >
-                {f}
-              </span>
-            ))}
-          </div>
-        )}
-        <Link
-          href="/settings"
-          className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
-        >
-          ⚙️ Edit in Settings
-        </Link>
-        <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-600 ring-1 ring-slate-200">
-          {loaded ? `${pool.length} in the draw` : "Loading…"}
-        </span>
-      </div>
-
       {/* Stage */}
       <div className="relative flex min-h-[16rem] flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-center text-white shadow-sm">
         {pool.length === 0 && !rolling ? (
