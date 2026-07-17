@@ -456,6 +456,31 @@ export function StudentProfile({ id }: { id: string }) {
         )}
       </div>
 
+      {/* Special-use questions (اللقاء التنويري) — kept separate from and
+          shown above the regular A/B/C/D questions. */}
+      <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
+            استخدام خاص
+          </span>
+          <h2 className="font-semibold text-slate-800" dir="rtl">
+            اللقاء التنويري
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SpecialYesNo
+            label="رد على الاتصال حق اللقاء التنويري ؟"
+            value={student.calledBack ?? null}
+            onChange={(v) => update(student.id, { calledBack: v })}
+          />
+          <SpecialYesNo
+            label="راح يحضر اللقاء التنويري ؟"
+            value={student.attendingMeeting ?? null}
+            onChange={(v) => update(student.id, { attendingMeeting: v })}
+          />
+        </div>
+      </div>
+
       {/* Profile questions (configurable by admin) */}
       <div className="space-y-4">
         {role === "admin" && (
@@ -492,31 +517,6 @@ export function StudentProfile({ id }: { id: string }) {
               }
             />
           ))}
-        </div>
-      </div>
-
-      {/* Special-use questions (اللقاء التنويري) — kept separate from the
-          regular A/B/C/D questions above. */}
-      <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-6 shadow-sm">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
-            استخدام خاص
-          </span>
-          <h2 className="font-semibold text-slate-800" dir="rtl">
-            اللقاء التنويري
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SpecialYesNo
-            label="رد على الاتصال حق اللقاء التنويري ؟"
-            value={student.calledBack ?? null}
-            onChange={(v) => update(student.id, { calledBack: v })}
-          />
-          <SpecialYesNo
-            label="راح يحضر اللقاء التنويري ؟"
-            value={student.attendingMeeting ?? null}
-            onChange={(v) => update(student.id, { attendingMeeting: v })}
-          />
         </div>
       </div>
 
