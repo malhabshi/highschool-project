@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from "react";
 export type DrawSettings = {
   onlyAttended: boolean;
   noRepeat: boolean;
+  applied: "any" | "masar" | "no"; // with MASAR / not with MASAR / everyone
   countries: string[]; // lowercased country keys to include (empty = all)
   excludedMajors: string[]; // lowercased major keys to exclude
 };
@@ -17,6 +18,7 @@ const CHANGED_EVENT = "draw-settings-changed";
 export const DRAW_DEFAULTS: DrawSettings = {
   onlyAttended: false,
   noRepeat: true,
+  applied: "any",
   countries: [],
   excludedMajors: [],
 };
@@ -30,6 +32,7 @@ function load(): DrawSettings {
     return {
       onlyAttended: !!p.onlyAttended,
       noRepeat: p.noRepeat !== false, // default true
+      applied: p.applied === "masar" || p.applied === "no" ? p.applied : "any",
       countries: Array.isArray(p.countries) ? p.countries : [],
       excludedMajors: Array.isArray(p.excludedMajors) ? p.excludedMajors : [],
     };

@@ -30,6 +30,8 @@ export function LuckyDraw() {
     return attendees.filter((a) => {
       if (settings.onlyAttended && !a.attended) return false;
       if (settings.noRepeat && wonIds.has(a.id)) return false;
+      if (settings.applied === "masar" && a.applied !== "MASAR") return false;
+      if (settings.applied === "no" && a.applied === "MASAR") return false;
       if (include.size > 0 && !include.has((a.country || "").trim().toLowerCase()))
         return false;
       if (exclude.has((a.major || "").trim().toLowerCase())) return false;

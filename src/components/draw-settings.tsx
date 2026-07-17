@@ -25,6 +25,8 @@ export function DrawSettingsPanel() {
     const exc = new Set(settings.excludedMajors);
     return attendees.filter((a) => {
       if (settings.onlyAttended && !a.attended) return false;
+      if (settings.applied === "masar" && a.applied !== "MASAR") return false;
+      if (settings.applied === "no" && a.applied === "MASAR") return false;
       if (inc.size > 0 && !inc.has((a.country || "").trim().toLowerCase()))
         return false;
       if (exc.has((a.major || "").trim().toLowerCase())) return false;
@@ -93,6 +95,37 @@ export function DrawSettingsPanel() {
             />
             Don&apos;t draw the same person twice
           </label>
+        </div>
+
+        {/* Applied with MASAR filter */}
+        <div className="mt-4 border-t border-slate-100 pt-4">
+          <p className="mb-2 text-sm font-medium text-slate-700">
+            Applied with MASAR?
+          </p>
+          <div className="inline-flex flex-wrap gap-2">
+            {(
+              [
+                { key: "any", label: "Everyone" },
+                { key: "masar", label: "With MASAR only" },
+                { key: "no", label: "Not with MASAR" },
+              ] as const
+            ).map((opt) => {
+              const on = settings.applied === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => patch({ applied: opt.key })}
+                  className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                    on
+                      ? "bg-blue-600 text-white"
+                      : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </section>
 
