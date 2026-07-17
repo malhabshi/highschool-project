@@ -132,17 +132,10 @@ export function LuckyDraw() {
               {display ? display.name || "—" : "🎲"}
             </div>
             {winner && !rolling && (
-              <div className="space-y-2 text-blue-50">
+              <div className="text-blue-50">
                 <div className="text-xl font-semibold" dir="ltr">
                   🎟️ Ticket #{winner.ticket || "—"}
                 </div>
-                {winner.country && (
-                  <div className="flex justify-center text-sm">
-                    <span className="rounded-full bg-white/15 px-3 py-1">
-                      {winner.country}
-                    </span>
-                  </div>
-                )}
               </div>
             )}
           </>
