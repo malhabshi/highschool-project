@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRole } from "@/components/role-context";
 import { useAttendees, type Attendee } from "@/lib/meeting";
 import { supabase } from "@/lib/supabase";
-import { telHref } from "@/lib/phone";
 
 // Admin-only prize draw. Picks a random winner from the Annual Meeting
 // "Meeting attendees" list (their names + phone numbers).
@@ -69,7 +68,7 @@ export function LuckyDraw() {
             user_name: user.name,
             action: "Draw winner",
             detail: `${finalPick.name || "—"}${
-              finalPick.phone ? ` · ${finalPick.phone}` : ""
+              finalPick.ticket ? ` · 🎟️ ${finalPick.ticket}` : ""
             }`,
           })
           .then(() => {});
@@ -133,28 +132,17 @@ export function LuckyDraw() {
               {display ? display.name || "—" : "🎲"}
             </div>
             {winner && !rolling && (
-              <div className="space-y-1 text-blue-50">
-                {winner.phone && (
-                  <a
-                    href={telHref(winner.phone)}
-                    className="inline-block text-xl font-semibold underline decoration-blue-300 underline-offset-4"
-                    dir="ltr"
-                  >
-                    📞 {winner.phone}
-                  </a>
-                )}
-                <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
-                  {winner.ticket && (
-                    <span className="rounded-full bg-white/15 px-3 py-1">
-                      🎟️ Ticket #{winner.ticket}
-                    </span>
-                  )}
-                  {winner.country && (
+              <div className="space-y-2 text-blue-50">
+                <div className="text-xl font-semibold" dir="ltr">
+                  🎟️ Ticket #{winner.ticket || "—"}
+                </div>
+                {winner.country && (
+                  <div className="flex justify-center text-sm">
                     <span className="rounded-full bg-white/15 px-3 py-1">
                       {winner.country}
                     </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </>
@@ -201,20 +189,9 @@ export function LuckyDraw() {
                 <span className="min-w-0 flex-1 truncate font-medium text-slate-800" dir="auto">
                   {w.name || "—"}
                 </span>
-                {w.ticket && (
-                  <span className="shrink-0 text-xs text-slate-400">
-                    🎟️ {w.ticket}
-                  </span>
-                )}
-                {w.phone && (
-                  <a
-                    href={telHref(w.phone)}
-                    className="shrink-0 font-medium text-blue-600"
-                    dir="ltr"
-                  >
-                    {w.phone}
-                  </a>
-                )}
+                <span className="shrink-0 font-medium text-blue-600" dir="ltr">
+                  🎟️ {w.ticket || "—"}
+                </span>
               </li>
             ))}
           </ol>
