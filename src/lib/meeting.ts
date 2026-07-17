@@ -70,11 +70,21 @@ export function useAttendees(actor: { id: string; name: string }) {
   );
 
   const refetch = useCallback(async () => {
-    const { data } = await supabase
-      .from("meeting_attendees")
-      .select("*")
-      .order("created_at", { ascending: true });
-    setAttendees((data ?? []).map((r) => fromRow(r as Row)));
+    // Supabase caps each request at 1000 rows, so page through until we've
+    // fetched everyone (we now have well over 1000 attendees).
+    const pageSize = 1000;
+    const all: Row[] = [];
+    for (let from = 0; ; from += pageSize) {
+      const { data, error } = await supabase
+        .from("meeting_attendees")
+        .select("*")
+        .order("created_at", { ascending: true })
+        .range(from, from + pageSize - 1);
+      if (error || !data || data.length === 0) break;
+      all.push(...(data as Row[]));
+      if (data.length < pageSize) break;
+    }
+    setAttendees(all.map((r) => fromRow(r)));
     setLoaded(true);
   }, []);
 
