@@ -27,6 +27,9 @@ export type Student = {
   major?: string;
   withMasar?: boolean; // student applied/enrolled with MASAR
   masarEmployee?: string; // which MASAR employee is helping them
+  // Special-use questions (اللقاء التنويري). null = not answered yet.
+  calledBack?: boolean | null; // رد على الاتصال حق اللقاء التنويري؟
+  attendingMeeting?: boolean | null; // راح يحضر اللقاء التنويري؟
 };
 
 // Other students that share the same phone number (potential duplicates).
@@ -60,6 +63,8 @@ export type Row = {
   major: string | null;
   with_masar: boolean | null;
   masar_employee: string | null;
+  called_back: boolean | null;
+  attending_meeting: boolean | null;
 };
 
 export function fromRow(r: Row): Student {
@@ -85,6 +90,8 @@ export function fromRow(r: Row): Student {
     major: r.major ?? "",
     withMasar: r.with_masar ?? false,
     masarEmployee: r.masar_employee ?? "",
+    calledBack: r.called_back ?? null,
+    attendingMeeting: r.attending_meeting ?? null,
   };
 }
 
@@ -114,6 +121,9 @@ function toRow(patch: Partial<Omit<Student, "id">>) {
   if (patch.withMasar !== undefined) row.with_masar = patch.withMasar;
   if (patch.masarEmployee !== undefined)
     row.masar_employee = patch.masarEmployee ?? "";
+  if (patch.calledBack !== undefined) row.called_back = patch.calledBack;
+  if (patch.attendingMeeting !== undefined)
+    row.attending_meeting = patch.attendingMeeting;
   return row;
 }
 

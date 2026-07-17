@@ -495,6 +495,31 @@ export function StudentProfile({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* Special-use questions (اللقاء التنويري) — kept separate from the
+          regular A/B/C/D questions above. */}
+      <div className="rounded-xl border-2 border-amber-300 bg-amber-50 p-6 shadow-sm">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white">
+            استخدام خاص
+          </span>
+          <h2 className="font-semibold text-slate-800" dir="rtl">
+            اللقاء التنويري
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <SpecialYesNo
+            label="رد على الاتصال حق اللقاء التنويري ؟"
+            value={student.calledBack ?? null}
+            onChange={(v) => update(student.id, { calledBack: v })}
+          />
+          <SpecialYesNo
+            label="راح يحضر اللقاء التنويري ؟"
+            value={student.attendingMeeting ?? null}
+            onChange={(v) => update(student.id, { attendingMeeting: v })}
+          />
+        </div>
+      </div>
+
       {/* Notes */}
       <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="font-semibold text-slate-800">Notes</h2>
@@ -513,6 +538,48 @@ export function StudentProfile({ id }: { id: string }) {
           placeholder="Type your notes here..."
           className="w-full resize-y rounded-lg border border-slate-300 p-3 text-sm text-slate-800 outline-none focus:border-blue-500"
         />
+      </div>
+    </div>
+  );
+}
+
+// A yes/no control for the special-use questions. Clicking the active choice
+// again clears it back to unanswered.
+function SpecialYesNo({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: boolean | null;
+  onChange: (v: boolean | null) => void;
+}) {
+  return (
+    <div className="rounded-xl border border-amber-200 bg-white p-4">
+      <p className="mb-3 text-sm font-medium text-slate-800" dir="rtl">
+        {label}
+      </p>
+      <div className="flex gap-2">
+        <button
+          onClick={() => onChange(value === true ? null : true)}
+          className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+            value === true
+              ? "bg-green-600 text-white"
+              : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+          }`}
+        >
+          Yes
+        </button>
+        <button
+          onClick={() => onChange(value === false ? null : false)}
+          className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${
+            value === false
+              ? "bg-red-600 text-white"
+              : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-50"
+          }`}
+        >
+          No
+        </button>
       </div>
     </div>
   );
