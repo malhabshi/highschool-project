@@ -18,4 +18,5 @@ export const navItems: NavItem[] = [
   { label: "Lucky Draw", href: "/draw", icon: "🎲", roles: ["admin"] },
   { label: "Messages", href: "/messages", icon: "💬", roles: ["admin"] },
   { label: "Users", href: "/users", icon: "👥", roles: ["admin"] },
+  { label: "Settings", href: "/settings", icon: "⚙️", roles: ["admin"] },
 ];

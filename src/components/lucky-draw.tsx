@@ -1,63 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useAttendees, type Attendee } from "@/lib/meeting";
+import { useDrawSettings } from "@/lib/draw-settings";
 import { supabase } from "@/lib/supabase";
 
 // Admin-only prize draw. Picks a random winner from the Annual Meeting
-// "Meeting attendees" list (their names + phone numbers).
+// "Meeting attendees" list, using the filters saved on the Settings page.
 export function LuckyDraw() {
   const { user } = useRole();
   const { attendees, loaded } = useAttendees({ id: user.id, name: user.name });
-
-  // Draw options.
-  const [onlyAttended, setOnlyAttended] = useState(false);
-  const [noRepeat, setNoRepeat] = useState(true);
-  // Countries to include (empty = all countries).
-  const [countries, setCountries] = useState<Set<string>>(new Set());
-  // Majors to EXCLUDE from the draw (empty = keep everyone).
-  const [excludedMajors, setExcludedMajors] = useState<Set<string>>(new Set());
-
-  // Distinct countries found in the attendee list (for the picker).
-  const allCountries = useMemo(() => {
-    const map = new Map<string, string>(); // lowercased -> display value
-    for (const a of attendees) {
-      const c = (a.country || "").trim();
-      if (c) map.set(c.toLowerCase(), c);
-    }
-    return [...map.values()].sort((x, y) => x.localeCompare(y));
-  }, [attendees]);
-
-  // Distinct majors found in the attendee list (for the exclude picker).
-  const allMajors = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const a of attendees) {
-      const m = (a.major || "").trim();
-      if (m) map.set(m.toLowerCase(), m);
-    }
-    return [...map.values()].sort((x, y) => x.localeCompare(y));
-  }, [attendees]);
-
-  function toggleCountry(c: string) {
-    setCountries((prev) => {
-      const next = new Set(prev);
-      const key = c.toLowerCase();
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
-
-  function toggleMajor(m: string) {
-    setExcludedMajors((prev) => {
-      const next = new Set(prev);
-      const key = m.toLowerCase();
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
+  const { settings, loaded: settingsLoaded } = useDrawSettings();
 
   // Winners drawn so far this session (newest first).
   const [winners, setWinners] = useState<Attendee[]>([]);
@@ -69,17 +24,30 @@ export function LuckyDraw() {
   const [winner, setWinner] = useState<Attendee | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Everyone eligible for the *next* draw.
+  // Everyone eligible for the *next* draw (based on the saved settings).
   const pool = useMemo(() => {
+    const include = new Set(settings.countries);
+    const exclude = new Set(settings.excludedMajors);
     return attendees.filter((a) => {
-      if (onlyAttended && !a.attended) return false;
-      if (noRepeat && wonIds.has(a.id)) return false;
-      if (countries.size > 0 && !countries.has((a.country || "").trim().toLowerCase()))
+      if (settings.onlyAttended && !a.attended) return false;
+      if (settings.noRepeat && wonIds.has(a.id)) return false;
+      if (include.size > 0 && !include.has((a.country || "").trim().toLowerCase()))
         return false;
-      if (excludedMajors.has((a.major || "").trim().toLowerCase())) return false;
+      if (exclude.has((a.major || "").trim().toLowerCase())) return false;
       return true;
     });
-  }, [attendees, onlyAttended, noRepeat, wonIds, countries, excludedMajors]);
+  }, [attendees, settings, wonIds]);
+
+  // A short description of the active filters.
+  const activeFilters = useMemo(() => {
+    const parts: string[] = [];
+    if (settings.onlyAttended) parts.push("attended only");
+    if (settings.countries.length > 0)
+      parts.push(`${settings.countries.length} country(ies)`);
+    if (settings.excludedMajors.length > 0)
+      parts.push(`${settings.excludedMajors.length} major(s) excluded`);
+    return parts;
+  }, [settings]);
 
   // Clean up any running timers on unmount.
   useEffect(() => {
@@ -132,121 +100,32 @@ export function LuckyDraw() {
 
   return (
     <div className="space-y-6">
-      {/* Options */}
-      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={onlyAttended}
-            onChange={(e) => setOnlyAttended(e.target.checked)}
-            className="h-4 w-4"
-          />
-          Only people who attended (حضر ✓)
-        </label>
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={noRepeat}
-            onChange={(e) => setNoRepeat(e.target.checked)}
-            className="h-4 w-4"
-          />
-          Don&apos;t draw the same person twice
-        </label>
-        <span className="ml-auto rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-600 ring-1 ring-slate-200">
+      {/* Filter summary + link to settings */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
+        <span className="font-medium text-slate-700">Filters:</span>
+        {settingsLoaded && activeFilters.length === 0 ? (
+          <span className="text-slate-500">everyone included</span>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {activeFilters.map((f) => (
+              <span
+                key={f}
+                className="rounded-full bg-white px-2.5 py-0.5 text-xs font-medium text-slate-600 ring-1 ring-slate-200"
+              >
+                {f}
+              </span>
+            ))}
+          </div>
+        )}
+        <Link
+          href="/settings"
+          className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-100"
+        >
+          ⚙️ Edit in Settings
+        </Link>
+        <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-600 ring-1 ring-slate-200">
           {loaded ? `${pool.length} in the draw` : "Loading…"}
         </span>
-
-        {/* Country picker */}
-        <div className="w-full border-t border-slate-200 pt-3">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-700">
-              Accepted country
-            </span>
-            <span className="text-xs text-slate-400">
-              {countries.size === 0
-                ? "(all countries)"
-                : `(${countries.size} selected)`}
-            </span>
-            {countries.size > 0 && (
-              <button
-                onClick={() => setCountries(new Set())}
-                className="ml-auto text-xs font-medium text-blue-600 hover:underline"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          {allCountries.length === 0 ? (
-            <p className="text-xs text-slate-400">
-              No countries found in the attendee list yet.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {allCountries.map((c) => {
-                const on = countries.has(c.toLowerCase());
-                return (
-                  <button
-                    key={c}
-                    onClick={() => toggleCountry(c)}
-                    className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                      on
-                        ? "bg-blue-600 text-white"
-                        : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100"
-                    }`}
-                  >
-                    {c}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Exclude majors */}
-        <div className="w-full border-t border-slate-200 pt-3">
-          <div className="mb-2 flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-700">
-              Exclude majors
-            </span>
-            <span className="text-xs text-slate-400">
-              {excludedMajors.size === 0
-                ? "(none excluded)"
-                : `(${excludedMajors.size} excluded)`}
-            </span>
-            {excludedMajors.size > 0 && (
-              <button
-                onClick={() => setExcludedMajors(new Set())}
-                className="ml-auto text-xs font-medium text-blue-600 hover:underline"
-              >
-                Clear
-              </button>
-            )}
-          </div>
-          {allMajors.length === 0 ? (
-            <p className="text-xs text-slate-400">
-              No majors found in the attendee list yet.
-            </p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {allMajors.map((m) => {
-                const off = excludedMajors.has(m.toLowerCase());
-                return (
-                  <button
-                    key={m}
-                    onClick={() => toggleMajor(m)}
-                    className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                      off
-                        ? "bg-red-600 text-white line-through"
-                        : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100"
-                    }`}
-                  >
-                    {m}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Stage */}
@@ -254,7 +133,7 @@ export function LuckyDraw() {
         {pool.length === 0 && !rolling ? (
           <p className="text-lg text-blue-50">
             {loaded
-              ? "No eligible people to draw. Import attendees in the Annual Meeting page (or adjust the options above)."
+              ? "No eligible people to draw. Import attendees in the Annual Meeting page (or adjust the filters in Settings)."
               : "Loading attendees…"}
           </p>
         ) : (
