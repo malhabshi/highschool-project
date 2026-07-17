@@ -88,11 +88,13 @@ export function LuckyDraw() {
     const shuffleNames = attendees.length ? attendees : pool;
     let elapsed = 0;
     const total = 5000;
+    // Flash names very fast, easing out only slightly near the very end.
+    const interval = () => 28 + Math.floor(elapsed / 1400) * 22;
     const tick = () => {
       setDisplay(shuffleNames[Math.floor(Math.random() * shuffleNames.length)]);
-      elapsed += 70 + Math.floor(elapsed / 600) * 40; // gradually slower
+      elapsed += interval();
       if (elapsed < total) {
-        timers.current.push(setTimeout(tick, 70 + Math.floor(elapsed / 600) * 40));
+        timers.current.push(setTimeout(tick, interval()));
       } else {
         setDisplay(finalPick);
         setWinner(finalPick);
