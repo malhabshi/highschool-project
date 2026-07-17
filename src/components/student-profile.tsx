@@ -52,6 +52,8 @@ export function StudentProfile({ id }: { id: string }) {
   const [gender, setGender] = useState("N/A");
   const [acceptedCountry, setAcceptedCountry] = useState("");
   const [major, setMajor] = useState("");
+  const [withMasar, setWithMasar] = useState(false);
+  const [masarEmployee, setMasarEmployee] = useState("");
   const [error, setError] = useState("");
 
   // Notes is edited locally and saved on blur (so live updates don't interrupt typing).
@@ -104,6 +106,8 @@ export function StudentProfile({ id }: { id: string }) {
     setGender(student.gender ?? "N/A");
     setAcceptedCountry(student.acceptedCountry ?? "");
     setMajor(student.major ?? "");
+    setWithMasar(student.withMasar ?? false);
+    setMasarEmployee(student.masarEmployee ?? "");
     setError("");
     setEditing(true);
   }
@@ -121,6 +125,8 @@ export function StudentProfile({ id }: { id: string }) {
       gender,
       acceptedCountry: acceptedCountry.trim(),
       major: major.trim(),
+      withMasar,
+      masarEmployee: withMasar ? masarEmployee.trim() : "",
     });
     setEditing(false);
   }
@@ -296,6 +302,19 @@ export function StudentProfile({ id }: { id: string }) {
                   <dd className="font-medium text-slate-800">{student.major}</dd>
                 </div>
               )}
+              <div className="flex justify-between gap-4">
+                <dt className="text-slate-500">With MASAR</dt>
+                <dd className="font-medium text-slate-800">
+                  {student.withMasar ? (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-semibold text-green-700">
+                      MASAR
+                      {student.masarEmployee ? ` · ${student.masarEmployee}` : ""}
+                    </span>
+                  ) : (
+                    "No"
+                  )}
+                </dd>
+              </div>
             </dl>
 
             {/* Delete / deletion request */}
@@ -397,6 +416,25 @@ export function StudentProfile({ id }: { id: string }) {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
               />
             </Field>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={withMasar}
+                onChange={(e) => setWithMasar(e.target.checked)}
+                className="h-5 w-5"
+              />
+              Student is with MASAR
+            </label>
+            {withMasar && (
+              <Field label="MASAR employee (who is helping)">
+                <input
+                  value={masarEmployee}
+                  onChange={(e) => setMasarEmployee(e.target.value)}
+                  placeholder="e.g. Ahmad Dashti"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                />
+              </Field>
+            )}
 
             {error && <p className="text-sm text-red-600">{error}</p>}
 

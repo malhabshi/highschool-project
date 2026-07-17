@@ -157,6 +157,8 @@ export function useStudentMutations() {
       school?: string;
       assignedTo: string;
       gender?: string;
+      withMasar?: boolean;
+      masarEmployee?: string;
     }) => {
       const { error } = await supabase.from("students").insert({
         name: data.name,
@@ -164,6 +166,8 @@ export function useStudentMutations() {
         school: data.school ?? "",
         assigned_to: data.assignedTo || null,
         gender: data.gender ?? "N/A",
+        with_masar: data.withMasar ?? false,
+        masar_employee: data.withMasar ? data.masarEmployee ?? "" : "",
       });
       if (error) throw new Error(error.message);
     },
@@ -183,6 +187,8 @@ export function useStudentMutations() {
         phone2?: string;
         acceptedCountry?: string;
         major?: string;
+        withMasar?: boolean;
+        masarEmployee?: string;
       }[]
     ) => {
       // Insert in chunks so very large uploads don't exceed request limits.
@@ -200,6 +206,8 @@ export function useStudentMutations() {
             phone2: d.phone2 ?? "",
             accepted_country: d.acceptedCountry ?? "",
             major: d.major ?? "",
+            with_masar: d.withMasar ?? false,
+            masar_employee: d.withMasar ? d.masarEmployee ?? "" : "",
           }))
         );
       }

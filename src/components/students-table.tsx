@@ -629,6 +629,8 @@ type BulkRow = {
   phone2?: string;
   acceptedCountry?: string;
   major?: string;
+  withMasar?: boolean;
+  masarEmployee?: string;
 };
 
 // Normalize a free-text gender cell to "M" | "F" | "N/A".
@@ -659,8 +661,8 @@ function BulkUploadPanel({
 
   function downloadTemplate() {
     const content =
-      "Name,Phone,Phone 2,School,Gender,Student Number,Accepted Country,Major\n" +
-      "Example Student,90001234,90005678,Example School,M,2024001,UK,Engineering\n";
+      "Name,Phone,Phone 2,School,Gender,Student Number,Accepted Country,Major,With MASAR,MASAR Employee\n" +
+      "Example Student,90001234,90005678,Example School,M,2024001,UK,Engineering,MASAR,Ahmad Dashti\n";
     const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -705,6 +707,12 @@ function BulkUploadPanel({
         const studentNumber = (r[5] ?? "").trim();
         const acceptedCountry = (r[6] ?? "").trim();
         const major = (r[7] ?? "").trim();
+        // "With MASAR" counts as MASAR if the cell contains "masar" or a yes.
+        const wm = (r[8] ?? "").trim().toLowerCase();
+        const withMasar =
+          wm.includes("masar") ||
+          ["yes", "y", "1", "true", "✓", "نعم"].includes(wm);
+        const masarEmployee = withMasar ? (r[9] ?? "").trim() : "";
         // Only the phone is required; everything else is optional.
         if (!phone) {
           skipped++;
@@ -722,6 +730,8 @@ function BulkUploadPanel({
           phone2,
           acceptedCountry,
           major,
+          withMasar,
+          masarEmployee,
         });
       }
       if (valid.length) onImport(valid);
@@ -742,9 +752,11 @@ function BulkUploadPanel({
         Download the template, fill it in (columns:{" "}
         <span className="font-medium">
           Name, Phone, Phone 2, School, Gender, Student Number, Accepted
-          Country, Major
+          Country, Major, With MASAR, MASAR Employee
         </span>
-        ), then upload it.{" "}
+        ), then upload it. For <span className="font-medium">With MASAR</span>,
+        write MASAR (or yes) if the student is with MASAR, and put the helping
+        staff name in <span className="font-medium">MASAR Employee</span>.{" "}
         <span className="font-medium">Only Phone is required</span> — everything
         else is optional. Numbers with the Kuwait country code (965…) are
         accepted and trimmed automatically. Rows with no name show the phone
@@ -804,6 +816,8 @@ function AddStudentForm({
     school?: string;
     assignedTo: string;
     gender: string;
+    withMasar: boolean;
+    masarEmployee: string;
   }) => void;
   onCancel: () => void;
 }) {
@@ -812,13 +826,23 @@ function AddStudentForm({
   const [school, setSchool] = useState("");
   const [gender, setGender] = useState("N/A");
   const [assignedTo, setAssignedTo] = useState(employees[0]?.id ?? "");
+  const [withMasar, setWithMasar] = useState(false);
+  const [masarEmployee, setMasarEmployee] = useState("");
   const [error, setError] = useState("");
 
   function submit() {
     if (!name.trim()) return setError("Name is required.");
     if (!/^\d{8}$/.test(phone)) return setError("Phone must be exactly 8 digits.");
     if (!assignedTo) return setError("Please assign an employee.");
-    onAdd({ name: name.trim(), phone, school: school.trim(), assignedTo, gender });
+    onAdd({
+      name: name.trim(),
+      phone,
+      school: school.trim(),
+      assignedTo,
+      gender,
+      withMasar,
+      masarEmployee: withMasar ? masarEmployee.trim() : "",
+    });
   }
 
   return (
@@ -890,6 +914,30 @@ function AddStudentForm({
           </select>
         </label>
       </div>
+
+      {/* With MASAR */}
+      <label className="flex items-center gap-2 text-sm text-slate-700">
+        <input
+          type="checkbox"
+          checked={withMasar}
+          onChange={(e) => setWithMasar(e.target.checked)}
+          className="h-5 w-5"
+        />
+        Student is with MASAR
+      </label>
+      {withMasar && (
+        <label className="block max-w-xs">
+          <span className="mb-1 block text-sm font-medium text-slate-600">
+            MASAR employee (who is helping)
+          </span>
+          <input
+            value={masarEmployee}
+            onChange={(e) => setMasarEmployee(e.target.value)}
+            placeholder="e.g. Ahmad Dashti"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+          />
+        </label>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
