@@ -14,6 +14,28 @@ export function LuckyDraw() {
   // Draw options.
   const [onlyAttended, setOnlyAttended] = useState(false);
   const [noRepeat, setNoRepeat] = useState(true);
+  // Countries to include (empty = all countries).
+  const [countries, setCountries] = useState<Set<string>>(new Set());
+
+  // Distinct countries found in the attendee list (for the picker).
+  const allCountries = useMemo(() => {
+    const map = new Map<string, string>(); // lowercased -> display value
+    for (const a of attendees) {
+      const c = (a.country || "").trim();
+      if (c) map.set(c.toLowerCase(), c);
+    }
+    return [...map.values()].sort((x, y) => x.localeCompare(y));
+  }, [attendees]);
+
+  function toggleCountry(c: string) {
+    setCountries((prev) => {
+      const next = new Set(prev);
+      const key = c.toLowerCase();
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   // Winners drawn so far this session (newest first).
   const [winners, setWinners] = useState<Attendee[]>([]);
@@ -30,9 +52,11 @@ export function LuckyDraw() {
     return attendees.filter((a) => {
       if (onlyAttended && !a.attended) return false;
       if (noRepeat && wonIds.has(a.id)) return false;
+      if (countries.size > 0 && !countries.has((a.country || "").trim().toLowerCase()))
+        return false;
       return true;
     });
-  }, [attendees, onlyAttended, noRepeat, wonIds]);
+  }, [attendees, onlyAttended, noRepeat, wonIds, countries]);
 
   // Clean up any running timers on unmount.
   useEffect(() => {
@@ -108,6 +132,52 @@ export function LuckyDraw() {
         <span className="ml-auto rounded-full bg-white px-3 py-1 text-sm font-medium text-slate-600 ring-1 ring-slate-200">
           {loaded ? `${pool.length} in the draw` : "Loading…"}
         </span>
+
+        {/* Country picker */}
+        <div className="w-full border-t border-slate-200 pt-3">
+          <div className="mb-2 flex items-center gap-2">
+            <span className="text-sm font-medium text-slate-700">
+              Accepted country
+            </span>
+            <span className="text-xs text-slate-400">
+              {countries.size === 0
+                ? "(all countries)"
+                : `(${countries.size} selected)`}
+            </span>
+            {countries.size > 0 && (
+              <button
+                onClick={() => setCountries(new Set())}
+                className="ml-auto text-xs font-medium text-blue-600 hover:underline"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {allCountries.length === 0 ? (
+            <p className="text-xs text-slate-400">
+              No countries found in the attendee list yet.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {allCountries.map((c) => {
+                const on = countries.has(c.toLowerCase());
+                return (
+                  <button
+                    key={c}
+                    onClick={() => toggleCountry(c)}
+                    className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
+                      on
+                        ? "bg-blue-600 text-white"
+                        : "bg-white text-slate-700 ring-1 ring-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Stage */}
