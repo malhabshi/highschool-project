@@ -29,11 +29,16 @@ export function LuckyDraw() {
   const wonIds = useMemo(() => new Set(winners.map((w) => w.id)), [winners]);
   // The most recent draw's winners (what we reveal on stage).
   const [batch, setBatch] = useState<Attendee[]>([]);
+  // How many of the batch have been revealed (they appear one by one).
+  const [revealCount, setRevealCount] = useState(0);
 
   // Animation state.
   const [rolling, setRolling] = useState(false);
   const [display, setDisplay] = useState<Attendee | null>(null);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // True while winners are still being revealed one at a time.
+  const revealing = batch.length > 0 && revealCount < batch.length;
 
   // Full-screen presentation mode (for the big screen).
   const [presenting, setPresenting] = useState(false);
@@ -94,8 +99,9 @@ export function LuckyDraw() {
   }, []);
 
   function draw() {
-    if (rolling || totalToDraw === 0) return;
+    if (rolling || revealing || totalToDraw === 0) return;
     setBatch([]);
+    setRevealCount(0);
     setRolling(true);
     timers.current.forEach(clearTimeout);
     timers.current = [];
@@ -120,6 +126,11 @@ export function LuckyDraw() {
         setBatch(finalBatch);
         setRolling(false);
         setWinners((prev) => [...finalBatch, ...prev]);
+        // Reveal the winners one at a time.
+        setRevealCount(1); // reveal the first straight away
+        for (let k = 2; k <= finalBatch.length; k++) {
+          timers.current.push(setTimeout(() => setRevealCount(k), (k - 1) * 1200));
+        }
         // Record each winner in the activity log for the admin report.
         for (const w of finalBatch) {
           supabase
@@ -140,32 +151,46 @@ export function LuckyDraw() {
   function reset() {
     setWinners([]);
     setBatch([]);
+    setRevealCount(0);
     setDisplay(null);
   }
 
-  // A grid of the winners just drawn (names shown large). No MASAR labels.
-  const batchNames = (big: boolean) => (
-    <div className="flex flex-wrap items-stretch justify-center gap-3">
-      {batch.map((w) => (
-        <div key={w.id} className="rounded-2xl bg-white/20 px-5 py-3 ring-2 ring-white/40">
-          <div
-            className={`font-extrabold leading-tight ${
-              big ? "text-3xl sm:text-5xl" : "text-xl sm:text-2xl"
-            }`}
-            dir="auto"
-          >
-            {w.name || "—"}
-          </div>
-          <div className={`mt-1 text-blue-50 ${big ? "text-lg" : "text-xs"}`}>
-            🎟️ {w.ticket || "—"}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  // The winners revealed so far (one by one). Newest one is emphasized.
+  const batchNames = (big: boolean) => {
+    const shown = batch.slice(0, revealCount);
+    return (
+      <div className="flex flex-wrap items-stretch justify-center gap-3">
+        {shown.map((w, i) => {
+          const isNewest = i === shown.length - 1;
+          return (
+            <div
+              key={w.id}
+              className={`rounded-2xl bg-white/20 px-5 py-3 ring-2 transition-transform ${
+                isNewest ? "scale-105 ring-white animate-pulse" : "ring-white/40"
+              }`}
+            >
+              <div
+                className={`font-extrabold leading-tight ${
+                  big ? "text-3xl sm:text-5xl" : "text-xl sm:text-2xl"
+                }`}
+                dir="auto"
+              >
+                {w.name || "—"}
+              </div>
+              <div className={`mt-1 text-blue-50 ${big ? "text-lg" : "text-xs"}`}>
+                🎟️ {w.ticket || "—"}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   const drawLabel = rolling
     ? "Drawing…"
+    : revealing
+    ? "Revealing…"
     : batch.length
     ? "🎲 Draw again"
     : "🎲 Draw";
@@ -193,7 +218,7 @@ export function LuckyDraw() {
           ) : batch.length ? (
             <>
               <p className="text-sm uppercase tracking-widest text-blue-200">
-                🎉 {batch.length} Winner{batch.length > 1 ? "s" : ""} 🎉
+                🎉 Winner{batch.length > 1 ? "s" : ""} {revealCount}/{batch.length} 🎉
               </p>
               {batchNames(false)}
             </>
@@ -211,7 +236,7 @@ export function LuckyDraw() {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={draw}
-            disabled={rolling || totalToDraw === 0}
+            disabled={rolling || revealing || totalToDraw === 0}
             className="rounded-xl bg-blue-600 px-8 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
           >
             {drawLabel}
@@ -292,7 +317,7 @@ export function LuckyDraw() {
             ) : batch.length ? (
               <>
                 <p className="mb-8 text-2xl uppercase tracking-[0.3em] text-blue-200 sm:text-3xl">
-                  🎉 {batch.length} Winner{batch.length > 1 ? "s" : ""} 🎉
+                  🎉 Winner{batch.length > 1 ? "s" : ""} {revealCount}/{batch.length} 🎉
                 </p>
                 {batchNames(true)}
               </>
@@ -305,7 +330,7 @@ export function LuckyDraw() {
           <div className="flex items-center justify-center gap-4 px-6 py-8">
             <button
               onClick={draw}
-              disabled={rolling || totalToDraw === 0}
+              disabled={rolling || revealing || totalToDraw === 0}
               className="rounded-2xl bg-white px-12 py-5 text-2xl font-bold text-blue-700 shadow-lg transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
             >
               {drawLabel}
