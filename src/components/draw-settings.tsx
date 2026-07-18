@@ -73,6 +73,48 @@ export function DrawSettingsPanel() {
         </span>
       </div>
 
+      {/* How many to draw */}
+      <section className="rounded-xl border border-slate-200 bg-white p-4">
+        <h2 className="mb-3 text-sm font-semibold text-slate-800">
+          How many students to draw?
+        </h2>
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500">With MASAR</span>
+            <input
+              type="number"
+              min={0}
+              value={settings.masarCount}
+              onChange={(e) =>
+                patch({
+                  masarCount: Math.max(0, parseInt(e.target.value || "0", 10) || 0),
+                })
+              }
+              className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-center text-lg font-semibold text-slate-800 outline-none focus:border-blue-500"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-slate-500">
+              Not with MASAR
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={settings.nonMasarCount}
+              onChange={(e) =>
+                patch({
+                  nonMasarCount: Math.max(
+                    0,
+                    parseInt(e.target.value || "0", 10) || 0
+                  ),
+                })
+              }
+              className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-center text-lg font-semibold text-slate-800 outline-none focus:border-blue-500"
+            />
+          </label>
+        </div>
+      </section>
+
       {/* Basic options */}
       <section className="rounded-xl border border-slate-200 bg-white p-4">
         <h2 className="mb-3 text-sm font-semibold text-slate-800">Options</h2>

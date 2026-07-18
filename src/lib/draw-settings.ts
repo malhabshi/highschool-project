@@ -10,7 +10,15 @@ export type DrawSettings = {
   applied: "any" | "masar" | "no"; // with MASAR / not with MASAR / everyone
   countries: string[]; // lowercased country keys to include (empty = all)
   excludedMajors: string[]; // lowercased major keys to exclude
+  masarCount: number; // how many WITH-MASAR students to draw
+  nonMasarCount: number; // how many NOT-with-MASAR students to draw
 };
+
+function toCount(v: unknown, fallback: number): number {
+  return typeof v === "number" && Number.isFinite(v) && v >= 0
+    ? Math.floor(v)
+    : fallback;
+}
 
 const KEY = "drawSettings";
 const CHANGED_EVENT = "draw-settings-changed";
@@ -21,6 +29,8 @@ export const DRAW_DEFAULTS: DrawSettings = {
   applied: "any",
   countries: [],
   excludedMajors: [],
+  masarCount: 1,
+  nonMasarCount: 1,
 };
 
 function load(): DrawSettings {
@@ -35,6 +45,8 @@ function load(): DrawSettings {
       applied: p.applied === "masar" || p.applied === "no" ? p.applied : "any",
       countries: Array.isArray(p.countries) ? p.countries : [],
       excludedMajors: Array.isArray(p.excludedMajors) ? p.excludedMajors : [],
+      masarCount: toCount(p.masarCount, 1),
+      nonMasarCount: toCount(p.nonMasarCount, 1),
     };
   } catch {
     return DRAW_DEFAULTS;

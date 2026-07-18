@@ -16,21 +16,18 @@ function sample<T>(arr: T[], n: number): T[] {
   return copy.slice(0, Math.max(0, n));
 }
 
-// Admin-only prize draw. Picks a chosen number of winners — some WITH MASAR and
-// some NOT — from the Annual Meeting attendees, using the saved Settings filters.
+// Admin-only prize draw. Picks the number of winners configured in Settings
+// (some with MASAR, some not) from the Annual Meeting attendees. The MASAR
+// split is used internally but never shown.
 export function LuckyDraw() {
   const { user } = useRole();
   const { attendees, loaded } = useAttendees({ id: user.id, name: user.name });
   const { settings } = useDrawSettings();
 
-  // How many to pick from each group.
-  const [masarCount, setMasarCount] = useState(1);
-  const [nonMasarCount, setNonMasarCount] = useState(1);
-
   // Winners drawn so far this session (for no-repeat + history), newest first.
   const [winners, setWinners] = useState<Attendee[]>([]);
   const wonIds = useMemo(() => new Set(winners.map((w) => w.id)), [winners]);
-  // The most recent draw's winners (what we reveal big on stage).
+  // The most recent draw's winners (what we reveal on stage).
   const [batch, setBatch] = useState<Attendee[]>([]);
 
   // Animation state.
@@ -64,8 +61,8 @@ export function LuckyDraw() {
   );
 
   // How many we'll actually draw (clamped to what's available).
-  const drawMasar = Math.min(masarCount, masarPool.length);
-  const drawNon = Math.min(nonMasarCount, nonMasarPool.length);
+  const drawMasar = Math.min(settings.masarCount, masarPool.length);
+  const drawNon = Math.min(settings.nonMasarCount, nonMasarPool.length);
   const totalToDraw = drawMasar + drawNon;
 
   async function enterFullscreen() {
@@ -103,12 +100,13 @@ export function LuckyDraw() {
     timers.current.forEach(clearTimeout);
     timers.current = [];
 
-    // Winners come only from the filtered pools (MASAR + non-MASAR)...
-    const finalBatch = [
-      ...sample(masarPool, drawMasar),
-      ...sample(nonMasarPool, drawNon),
-    ];
-    // ...but during the ~5s shuffle we flash EVERY attendee's name.
+    // Winners come from the filtered MASAR + non-MASAR pools, then are shuffled
+    // together so the order doesn't reveal who is which.
+    const finalBatch = sample(
+      [...sample(masarPool, drawMasar), ...sample(nonMasarPool, drawNon)],
+      drawMasar + drawNon
+    );
+    // During the ~5s shuffle we flash EVERY attendee's name.
     const shuffleNames = attendees.length ? attendees : pool;
     let elapsed = 0;
     const total = 5000;
@@ -130,9 +128,7 @@ export function LuckyDraw() {
               user_id: user.id,
               user_name: user.name,
               action: "Draw winner",
-              detail: `${w.name || "—"}${w.ticket ? ` · 🎟️ ${w.ticket}` : ""} · ${
-                w.applied === "MASAR" ? "MASAR" : "non-MASAR"
-              }`,
+              detail: `${w.name || "—"}${w.ticket ? ` · 🎟️ ${w.ticket}` : ""}`,
             })
             .then(() => {});
         }
@@ -147,64 +143,11 @@ export function LuckyDraw() {
     setDisplay(null);
   }
 
-  // The count inputs (shared between normal + fullscreen).
-  const countControls = (compact = false) => (
-    <div className={`flex flex-wrap items-end gap-4 ${compact ? "" : ""}`}>
-      <label className="flex flex-col gap-1">
-        <span
-          className={compact ? "text-sm text-blue-100" : "text-xs font-medium text-slate-500"}
-        >
-          With MASAR ({masarPool.length} avail.)
-        </span>
-        <input
-          type="number"
-          min={0}
-          value={masarCount}
-          onChange={(e) =>
-            setMasarCount(Math.max(0, parseInt(e.target.value || "0", 10) || 0))
-          }
-          className={`w-24 rounded-lg border px-3 py-2 text-center text-lg font-semibold outline-none ${
-            compact
-              ? "border-white/30 bg-white/10 text-white"
-              : "border-slate-300 text-slate-800 focus:border-blue-500"
-          }`}
-        />
-      </label>
-      <label className="flex flex-col gap-1">
-        <span
-          className={compact ? "text-sm text-blue-100" : "text-xs font-medium text-slate-500"}
-        >
-          Not with MASAR ({nonMasarPool.length} avail.)
-        </span>
-        <input
-          type="number"
-          min={0}
-          value={nonMasarCount}
-          onChange={(e) =>
-            setNonMasarCount(Math.max(0, parseInt(e.target.value || "0", 10) || 0))
-          }
-          className={`w-24 rounded-lg border px-3 py-2 text-center text-lg font-semibold outline-none ${
-            compact
-              ? "border-white/30 bg-white/10 text-white"
-              : "border-slate-300 text-slate-800 focus:border-blue-500"
-          }`}
-        />
-      </label>
-    </div>
-  );
-
-  // A big grid of the winners just drawn (names shown large).
+  // A grid of the winners just drawn (names shown large). No MASAR labels.
   const batchNames = (big: boolean) => (
     <div className="flex flex-wrap items-stretch justify-center gap-3">
       {batch.map((w) => (
-        <div
-          key={w.id}
-          className={`rounded-2xl px-5 py-3 ${
-            w.applied === "MASAR"
-              ? "bg-white/20 ring-2 ring-emerald-300"
-              : "bg-white/20 ring-2 ring-amber-300"
-          }`}
-        >
+        <div key={w.id} className="rounded-2xl bg-white/20 px-5 py-3 ring-2 ring-white/40">
           <div
             className={`font-extrabold leading-tight ${
               big ? "text-3xl sm:text-5xl" : "text-xl sm:text-2xl"
@@ -213,21 +156,8 @@ export function LuckyDraw() {
           >
             {w.name || "—"}
           </div>
-          <div
-            className={`mt-1 flex items-center justify-center gap-2 ${
-              big ? "text-lg" : "text-xs"
-            } text-blue-50`}
-          >
-            <span>🎟️ {w.ticket || "—"}</span>
-            <span
-              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                w.applied === "MASAR"
-                  ? "bg-emerald-400/30 text-emerald-50"
-                  : "bg-amber-400/30 text-amber-50"
-              }`}
-            >
-              {w.applied === "MASAR" ? "MASAR" : "non-MASAR"}
-            </span>
+          <div className={`mt-1 text-blue-50 ${big ? "text-lg" : "text-xs"}`}>
+            🎟️ {w.ticket || "—"}
           </div>
         </div>
       ))}
@@ -237,20 +167,12 @@ export function LuckyDraw() {
   const drawLabel = rolling
     ? "Drawing…"
     : batch.length
-    ? `🎲 Draw again (${totalToDraw})`
-    : `🎲 Draw ${totalToDraw || ""}`.trim();
+    ? "🎲 Draw again"
+    : "🎲 Draw";
 
   return (
     <>
       <div className="space-y-6">
-        {/* Count inputs */}
-        <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-          <p className="mb-3 text-sm font-medium text-slate-700">
-            How many students to draw?
-          </p>
-          {countControls(false)}
-        </div>
-
         {/* Stage */}
         <div className="relative flex min-h-[16rem] flex-col items-center justify-center gap-4 overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-blue-600 to-indigo-700 p-8 text-center text-white shadow-sm">
           {pool.length === 0 && !rolling ? (
@@ -328,15 +250,6 @@ export function LuckyDraw() {
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-800" dir="auto">
                     {w.name || "—"}
                   </span>
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      w.applied === "MASAR"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-amber-100 text-amber-700"
-                    }`}
-                  >
-                    {w.applied === "MASAR" ? "MASAR" : "non-MASAR"}
-                  </span>
                   <span className="shrink-0 font-medium text-blue-600" dir="ltr">
                     🎟️ {w.ticket || "—"}
                   </span>
@@ -351,12 +264,8 @@ export function LuckyDraw() {
       {presenting && (
         <div className="fixed inset-0 z-[100] flex flex-col bg-gradient-to-br from-blue-600 to-indigo-700 text-white">
           {/* Top bar */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4">
-            <span className="text-lg font-semibold text-blue-100">
-              🎲 Lucky Draw · MASAR {masarPool.length} · non-MASAR{" "}
-              {nonMasarPool.length}
-            </span>
-            {countControls(true)}
+          <div className="flex items-center justify-between gap-3 px-6 py-4">
+            <span className="text-lg font-semibold text-blue-100">🎲 Lucky Draw</span>
             <button
               onClick={exitFullscreen}
               className="rounded-lg bg-white/15 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/25"
@@ -369,7 +278,7 @@ export function LuckyDraw() {
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
             {totalToDraw === 0 && !rolling && batch.length === 0 ? (
               <p className="text-2xl text-blue-50">
-                Set how many to draw above, then press Draw.
+                Set how many to draw in Settings, then press Draw.
               </p>
             ) : rolling ? (
               <>
