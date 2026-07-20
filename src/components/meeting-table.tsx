@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAttendees, useAttendeeAssignments } from "@/lib/meeting";
+import {
+  useAttendees,
+  useAttendeeAssignments,
+  useMeetingArchives,
+  useMeetingCountry,
+} from "@/lib/meeting";
 import { useRole } from "@/components/role-context";
 import { telHref } from "@/lib/phone";
 
@@ -75,6 +80,9 @@ export function MeetingTable() {
     });
   // Match attendees (by phone) to their student record + assigned account user.
   const { matchFor } = useAttendeeAssignments(attendees);
+  // Shared "lock to one country" setting + saved archives.
+  const { country: lockCountry } = useMeetingCountry();
+  const { saveSnapshot } = useMeetingArchives();
   const [adding, setAdding] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -139,15 +147,32 @@ export function MeetingTable() {
     URL.revokeObjectURL(url);
   }
 
+  // When locked to a country, only show that country's attendees.
+  const lc = (lockCountry || "").trim().toLowerCase();
+  const scoped = lc
+    ? attendees.filter((a) => (a.country || "").trim().toLowerCase() === lc)
+    : attendees;
+
   const term = search.trim().toLowerCase();
   const phoneQuery = search.replace(/\D/g, "");
   const shown = term
-    ? attendees.filter(
+    ? scoped.filter(
         (a) =>
           a.name.toLowerCase().includes(term) ||
           (phoneQuery.length > 0 && a.phone.includes(phoneQuery))
       )
-    : attendees;
+    : scoped;
+
+  async function saveAndReset() {
+    const label = prompt(
+      "Save the current attendees as a named archive, then clear the table.\nName this meeting:",
+      "Meeting"
+    );
+    if (label === null) return;
+    await saveSnapshot(label.trim() || "Meeting", attendees);
+    await removeAll();
+    alert(`Saved "${label.trim() || "Meeting"}" and cleared the table.`);
+  }
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -167,10 +192,18 @@ export function MeetingTable() {
           )}
           {isAdmin && attendees.length > 0 && (
             <button
+              onClick={saveAndReset}
+              className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-600 hover:text-white"
+            >
+              💾 Save &amp; reset
+            </button>
+          )}
+          {isAdmin && attendees.length > 0 && (
+            <button
               onClick={() => {
                 if (
                   confirm(
-                    `Delete ALL ${attendees.length} attendees? This cannot be undone.`
+                    `Delete ALL ${attendees.length} attendees WITHOUT saving? This cannot be undone.`
                   )
                 )
                   removeAll();
@@ -195,6 +228,14 @@ export function MeetingTable() {
         </div>
       </div>
 
+      {lc && (
+        <div className="border-b border-blue-100 bg-blue-50 px-5 py-2 text-sm text-blue-800">
+          🔒 Locked to <span className="font-semibold">{lockCountry}</span> —
+          showing {shown.length} of {attendees.length}. Change or unlock it in
+          the controls above.
+        </div>
+      )}
+
       {bulkOpen && (
         <BulkImportPanel
           onCancel={() => setBulkOpen(false)}
@@ -204,6 +245,7 @@ export function MeetingTable() {
 
       {adding && (
         <AddAttendeeForm
+          defaultCountry={lockCountry ?? ""}
           onCancel={() => setAdding(false)}
           onAdd={async (data) => {
             await add(data);
@@ -620,6 +662,7 @@ function BulkImportPanel({
 function AddAttendeeForm({
   onAdd,
   onCancel,
+  defaultCountry = "",
 }: {
   onAdd: (data: {
     name: string;
@@ -633,12 +676,13 @@ function AddAttendeeForm({
     major: string;
   }) => Promise<void>;
   onCancel: () => void;
+  defaultCountry?: string;
 }) {
   const [name, setName] = useState("");
   const [phone1, setPhone1] = useState("");
   const [phone2, setPhone2] = useState("");
   const [phone3, setPhone3] = useState("");
-  const [country, setCountry] = useState("");
+  const [country, setCountry] = useState(defaultCountry);
   const [major, setMajor] = useState("");
   const [applied, setApplied] = useState(false);
   const [masarEmployee, setMasarEmployee] = useState("");

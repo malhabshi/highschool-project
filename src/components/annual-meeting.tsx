@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRole } from "@/components/role-context";
 import { supabase } from "@/lib/supabase";
 import { MeetingTable } from "@/components/meeting-table";
+import { MeetingAdmin } from "@/components/meeting-admin";
 import { ActivityLog } from "@/components/activity-log";
 
 async function authHeader() {
@@ -99,6 +100,7 @@ export function AnnualMeeting() {
   return (
     <div className="space-y-6">
       {isAdmin && <AdminPasswordControl />}
+      {isAdmin && <MeetingAdmin />}
       <MeetingTable />
       {isAdmin && <ActivityLog />}
     </div>

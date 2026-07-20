@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRole } from "@/components/role-context";
-import { useAttendees, type Attendee } from "@/lib/meeting";
+import { useAttendees, useMeetingCountry, type Attendee } from "@/lib/meeting";
 import { useDrawSettings } from "@/lib/draw-settings";
 import { supabase } from "@/lib/supabase";
 
@@ -23,6 +23,7 @@ export function LuckyDraw() {
   const { user } = useRole();
   const { attendees, loaded } = useAttendees({ id: user.id, name: user.name });
   const { settings } = useDrawSettings();
+  const { country: lockCountry } = useMeetingCountry();
 
   // Winners drawn so far this session (for no-repeat + history), newest first.
   const [winners, setWinners] = useState<Attendee[]>([]);
@@ -47,7 +48,9 @@ export function LuckyDraw() {
   const pool = useMemo(() => {
     const include = new Set(settings.countries);
     const exclude = new Set(settings.excludedMajors);
+    const lock = (lockCountry || "").trim().toLowerCase();
     return attendees.filter((a) => {
+      if (lock && (a.country || "").trim().toLowerCase() !== lock) return false;
       if (settings.onlyAttended && !a.attended) return false;
       if (settings.noRepeat && wonIds.has(a.id)) return false;
       if (settings.applied === "masar" && a.applied !== "MASAR") return false;
@@ -57,7 +60,7 @@ export function LuckyDraw() {
       if (exclude.has((a.major || "").trim().toLowerCase())) return false;
       return true;
     });
-  }, [attendees, settings, wonIds]);
+  }, [attendees, settings, wonIds, lockCountry]);
 
   const masarPool = useMemo(() => pool.filter((a) => a.applied === "MASAR"), [pool]);
   const nonMasarPool = useMemo(

@@ -340,6 +340,130 @@ export function useActivityLog() {
   return { entries, loaded };
 }
 
+// A saved snapshot of the attendees list (kept when we reset between meetings).
+export type MeetingArchive = {
+  id: string;
+  label: string;
+  createdAt: string;
+  count: number;
+};
+
+export function useMeetingArchives() {
+  const [archives, setArchives] = useState<MeetingArchive[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("meeting_archives")
+      .select("id, label, created_at, count")
+      .order("created_at", { ascending: false });
+    setArchives(
+      (data ?? []).map((r) => ({
+        id: r.id as string,
+        label: (r.label as string) ?? "",
+        createdAt: (r.created_at as string) ?? "",
+        count: (r.count as number) ?? 0,
+      }))
+    );
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    refetch();
+    const ch = supabase
+      .channel(`meeting-archives-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "meeting_archives" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [refetch]);
+
+  // Snapshot the given attendees into a new archive row (does not delete them).
+  const saveSnapshot = useCallback(
+    async (label: string, attendees: Attendee[]) => {
+      const rows = attendees.map((a) => ({
+        name: a.name,
+        phone: a.phone,
+        country: a.country,
+        major: a.major,
+        applied: a.applied,
+        masar_employee: a.masarEmployee,
+        ielts: a.ielts,
+        other_office: a.otherOffice,
+        attended: a.attended,
+        ticket: a.ticket,
+      }));
+      await supabase
+        .from("meeting_archives")
+        .insert({ label, count: rows.length, attendees: rows });
+      await refetch();
+    },
+    [refetch]
+  );
+
+  const remove = useCallback(async (id: string) => {
+    await supabase.from("meeting_archives").delete().eq("id", id);
+  }, []);
+
+  // Load the full attendee rows for one archive (for CSV download).
+  const fetchAttendees = useCallback(async (id: string) => {
+    const { data } = await supabase
+      .from("meeting_archives")
+      .select("attendees")
+      .eq("id", id)
+      .maybeSingle();
+    return (data?.attendees ?? []) as Record<string, unknown>[];
+  }, []);
+
+  return { archives, loaded, saveSnapshot, remove, fetchAttendees };
+}
+
+// Shared "lock the meeting to one country" setting (all users see the same).
+export function useMeetingCountry() {
+  const [country, setCountryState] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("meeting_settings")
+      .select("country")
+      .eq("id", 1)
+      .maybeSingle();
+    setCountryState((data?.country as string) ?? null);
+    setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    refetch();
+    const ch = supabase
+      .channel(`meeting-settings-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "meeting_settings" },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [refetch]);
+
+  const setCountry = useCallback(async (c: string | null) => {
+    setCountryState(c);
+    await supabase
+      .from("meeting_settings")
+      .update({ country: c && c.trim() ? c.trim() : null })
+      .eq("id", 1);
+  }, []);
+
+  return { country, setCountry, loaded };
+}
+
 // Map a camelCase attendee patch to the snake_case DB columns.
 function toDb(patch: Partial<Omit<Attendee, "id">>) {
   const row: Record<string, unknown> = {};
