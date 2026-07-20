@@ -79,6 +79,66 @@ export function MeetingTable() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [search, setSearch] = useState("");
 
+  // Export all attendees (with every field we added) to a CSV for Excel.
+  function exportCSV() {
+    const cell = (v: string) => {
+      const s = (v ?? "").toString();
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const yn = (b: boolean) => (b ? "yes" : "no");
+    const header = [
+      "Ticket",
+      "Name",
+      "Phone",
+      "Phone 2",
+      "Phone 3",
+      "Accepted in",
+      "Major",
+      "Applied with us",
+      "MASAR Employee",
+      "Assigned to (account)",
+      "حضر؟",
+      "IELTS",
+      "مقدم مع مكتب ثاني؟",
+    ];
+    const lines = [header.join(",")];
+    for (const a of attendees) {
+      const phones = splitPhones(a.phone);
+      const match = matchFor(a);
+      const assigned = match
+        ? match.assignedName || "unassigned (student)"
+        : "";
+      lines.push(
+        [
+          a.ticket,
+          a.name,
+          phones[0] ?? "",
+          phones[1] ?? "",
+          phones[2] ?? "",
+          a.country,
+          a.major,
+          a.applied === "MASAR" ? "MASAR" : "no",
+          a.applied === "MASAR" ? a.masarEmployee : "",
+          assigned,
+          yn(a.attended),
+          yn(a.ielts),
+          yn(a.otherOffice),
+        ]
+          .map(cell)
+          .join(",")
+      );
+    }
+    const blob = new Blob(["﻿" + lines.join("\n")], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "meeting-attendees.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   const term = search.trim().toLowerCase();
   const phoneQuery = search.replace(/\D/g, "");
   const shown = term
@@ -97,6 +157,14 @@ export function MeetingTable() {
         </h2>
         <div className="flex items-center gap-3">
           <span className="text-sm text-slate-500">{attendees.length} total</span>
+          {attendees.length > 0 && (
+            <button
+              onClick={exportCSV}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              ⬇ Export CSV
+            </button>
+          )}
           {isAdmin && attendees.length > 0 && (
             <button
               onClick={() => {
