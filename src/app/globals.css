@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Maths rendering for the quiz questions (KaTeX). */
+@import "katex/dist/katex.min.css";
 
 :root {
   --background: #f1f5f9;
