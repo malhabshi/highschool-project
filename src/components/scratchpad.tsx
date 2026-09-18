@@ -15,8 +15,10 @@ import type { Stroke } from "@/lib/exam-session";
 // phone still lines up when the session is reopened on a tablet.
 
 export const PAD = { w: 1000, h: 600 };
-// Booklet pages are 612 x 866.833 pt; this keeps the overlay in proportion.
-export const PAGE = { w: 1000, h: 1416 };
+// Overlay space for a lesson page. The page is now HTML, so its height depends
+// on the screen; a square space stretched to fit (preserveAspectRatio="none")
+// keeps marks in the same relative spot as the text reflows.
+export const CONTENT = { w: 1000, h: 1000 };
 
 const COLOURS = [
   { name: "أسود", value: "#0f172a" },

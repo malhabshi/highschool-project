@@ -61,6 +61,15 @@ body {
     padding-bottom: 6px;
     border-bottom: 1px solid #eee;
   }
+  /* A transcribed lesson page. Tables and headings shouldn't be orphaned, but
+     the page itself may be taller than one sheet, so only the parts are kept
+     together rather than the whole thing. */
+  .print-content table,
+  .print-content h4,
+  .print-content li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
   .print-section {
     break-before: page;
     page-break-before: always;

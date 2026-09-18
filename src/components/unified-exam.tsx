@@ -11,8 +11,9 @@ import {
   PenToolbar,
   StrokePaths,
   useDrawTools,
-  PAGE,
+  CONTENT,
 } from "@/components/scratchpad";
+import { LessonPageContent, hasContent } from "@/components/lesson-page";
 import lessonData from "@/data/lessons.json";
 
 const LETTERS = ["a", "b", "c", "d"];
@@ -372,6 +373,7 @@ function AnnotatablePage({
   const tools = useDrawTools();
   const [writing, setWriting] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [showScan, setShowScan] = useState(false);
 
   const strokes = s.session.drawings[key] ?? [];
   const note = s.session.notes[key] ?? "";
@@ -409,6 +411,17 @@ function AnnotatablePage({
           📝 ملاحظات الصفحة {hasNote && "✍️"}
         </button>
 
+        {/* The scan stays one tap away so the transcription can be checked. */}
+        {hasContent(page) && (
+          <button
+            type="button"
+            onClick={() => setShowScan(!showScan)}
+            className="rounded-lg bg-white px-3 py-1.5 text-sm text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+          >
+            {showScan ? "🌐 عرض الصفحة كموقع" : "📄 الصفحة الأصلية"}
+          </button>
+        )}
+
         {writing && (
           <PenToolbar
             tools={tools}
@@ -419,15 +432,21 @@ function AnnotatablePage({
       </div>
 
       <div className="relative mx-auto w-full max-w-3xl">
-        <img
-          src={`/booklet/p${String(page).padStart(2, "0")}.jpg`}
-          alt={`${title} — صفحة ${page}`}
-          loading="lazy"
-          className="block w-full rounded-lg border border-slate-200 bg-white"
-        />
+        {showScan || !hasContent(page) ? (
+          <img
+            src={`/booklet/p${String(page).padStart(2, "0")}.jpg`}
+            alt={`${title} — صفحة ${page}`}
+            loading="lazy"
+            className="block w-full rounded-lg border border-slate-200 bg-white"
+          />
+        ) : (
+          <div className="rounded-lg border border-slate-200 bg-white p-4 sm:p-6">
+            <LessonPageContent page={page} />
+          </div>
+        )}
         <DrawSurface
-          width={PAGE.w}
-          height={PAGE.h}
+          width={CONTENT.w}
+          height={CONTENT.h}
           strokes={strokes}
           onChange={(d) => s.setDrawing(key, d)}
           tools={tools}
@@ -806,14 +825,20 @@ function PrintPage({
   return (
     <div className="print-q">
       <div style={{ position: "relative" }}>
-        <img
-          src={`/booklet/p${String(page).padStart(2, "0")}.jpg`}
-          alt=""
-          className="print-page"
-        />
+        {hasContent(page) ? (
+          <div className="print-content">
+            <LessonPageContent page={page} />
+          </div>
+        ) : (
+          <img
+            src={`/booklet/p${String(page).padStart(2, "0")}.jpg`}
+            alt=""
+            className="print-page"
+          />
+        )}
         {strokes.length > 0 && (
           <svg
-            viewBox={`0 0 ${PAGE.w} ${PAGE.h}`}
+            viewBox={`0 0 ${CONTENT.w} ${CONTENT.h}`}
             preserveAspectRatio="none"
             style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
           >
