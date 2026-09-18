@@ -30,6 +30,19 @@ const replace = process.argv.includes("--replace");
 const dataPath = new URL("../src/data/quiz-questions.json", import.meta.url);
 const { questions } = JSON.parse(readFileSync(dataPath, "utf8"));
 
+// Step-by-step solutions live in their own file, keyed "page:number".
+const stepsPath = new URL("../src/data/solutions.json", import.meta.url);
+const { steps: SOLUTIONS } = JSON.parse(readFileSync(stepsPath, "utf8"));
+const stepsFor = (q) => SOLUTIONS[`${q.page}:${q.number}`] ?? [];
+
+const missing = questions.filter((q) => stepsFor(q).length === 0);
+if (missing.length > 0) {
+  throw new Error(
+    `No solution steps for ${missing.length} question(s): ` +
+      missing.map((q) => `${q.page}:${q.number}`).join(", ")
+  );
+}
+
 // Fail loudly on malformed rows rather than seeding a broken quiz.
 questions.forEach((q, i) => {
   if (!Array.isArray(q.options) || q.options.length !== 4) {
@@ -58,8 +71,8 @@ try {
   for (const q of questions) {
     await client.query(
       `insert into quiz_questions
-         (topic, section, source_page, number, body, options, answer_index, verified, work, position)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+         (topic, section, source_page, number, body, options, answer_index, verified, work, steps, position)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
       [
         q.topic,
         q.section,
@@ -70,6 +83,7 @@ try {
         q.answerIndex,
         q.verified === true,
         q.work ?? "",
+        stepsFor(q),
         position++,
       ]
     );

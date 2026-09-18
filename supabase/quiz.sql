@@ -23,6 +23,9 @@ create table if not exists quiz_questions (
   verified boolean not null default false,
   -- Short note on how the answer was reached; shown in the review screen.
   work text not null default '',
+  -- Ordered step-by-step solution. Maths is wrapped in $...$ and rendered
+  -- with KaTeX, so it reads correctly inside right-to-left Arabic.
+  steps text[] not null default '{}',
   position int not null default 0,
   created_at timestamptz not null default now()
 );

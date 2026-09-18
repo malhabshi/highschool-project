@@ -16,6 +16,7 @@ export type QuizQuestion = {
   // answer key, so it still needs a human check.
   verified: boolean;
   work: string;
+  steps: string[];
 };
 
 type Row = {
@@ -29,6 +30,7 @@ type Row = {
   answer_index: number;
   verified: boolean;
   work: string | null;
+  steps: string[] | null;
 };
 
 function mapRow(r: Row): QuizQuestion {
@@ -43,11 +45,12 @@ function mapRow(r: Row): QuizQuestion {
     answerIndex: r.answer_index,
     verified: r.verified,
     work: r.work ?? "",
+    steps: r.steps ?? [],
   };
 }
 
 const COLUMNS =
-  "id, topic, section, source_page, number, body, options, answer_index, verified, work, position";
+  "id, topic, section, source_page, number, body, options, answer_index, verified, work, steps, position";
 
 export function useQuizQuestions() {
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);

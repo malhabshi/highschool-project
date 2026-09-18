@@ -719,12 +719,7 @@ function PracticeCard({
           ))}
         </div>
 
-        {answered && q.work && (
-          <div className="mt-4 rounded-xl bg-slate-50 p-3.5">
-            <p className="text-sm font-semibold text-slate-600">💡 طريقة الحل</p>
-            <p className="mt-1 text-slate-700">{q.work}</p>
-          </div>
-        )}
+        {answered && <Solution q={q} />}
         {answered && !q.verified && (
           <p className="mt-2 text-sm text-amber-700">
             ⚠️ هذه الإجابة تحتاج مراجعة المعلم.
@@ -786,6 +781,34 @@ function OptionButton({
         <MathText text={text} />
       </span>
     </button>
+  );
+}
+
+// The worked solution. Steps are stored with maths in $...$ and rendered
+// through KaTeX — as plain text the formulas were unreadable, because
+// right-to-left Arabic reverses a bare "∛192 = 4∛3" into "3√4 = 192√3".
+function Solution({ q }: { q: QuizQuestion }) {
+  const steps = q.steps?.length ? q.steps : q.work ? [q.work] : [];
+  if (steps.length === 0) return null;
+
+  return (
+    <div className="mt-4 overflow-hidden rounded-xl border border-blue-200 bg-blue-50/60">
+      <p className="border-b border-blue-200 bg-blue-100/60 px-4 py-2 text-sm font-bold text-blue-900">
+        💡 طريقة الحل خطوة بخطوة
+      </p>
+      <ol className="space-y-2.5 p-4">
+        {steps.map((step, i) => (
+          <li key={i} className="flex gap-3">
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blue-600 text-xs font-bold text-white">
+              {i + 1}
+            </span>
+            <span className="text-[17px] leading-loose text-slate-800">
+              <MathText text={step} />
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -875,12 +898,7 @@ function ExamStep({ questions, s }: { questions: QuizQuestion[]; s: Session }) {
                   />
                 ))}
               </div>
-              {submitted && q.work && (
-                <div className="mt-4 rounded-xl bg-slate-50 p-3.5">
-                  <p className="text-sm font-semibold text-slate-600">💡 طريقة الحل</p>
-                  <p className="mt-1 text-slate-700">{q.work}</p>
-                </div>
-              )}
+              {submitted && <Solution q={q} />}
               <WorkArea
                 compact
                 note={s.session.notes[key] ?? ""}
@@ -1001,7 +1019,7 @@ function Review({
               />
             ))}
           </div>
-          {q.work && <p className="mt-2 text-sm text-slate-500">💡 {q.work}</p>}
+          <Solution q={q} />
           <button
             onClick={() => onConfirm(q.id, q.answerIndex)}
             className="mt-3 min-h-11 rounded-xl bg-emerald-600 px-4 font-medium text-white transition hover:bg-emerald-700"
