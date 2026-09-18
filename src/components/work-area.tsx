@@ -32,7 +32,7 @@ export function WorkArea({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className={`rounded-lg px-3 py-1.5 text-sm ring-1 transition ${
+        className={`min-h-11 rounded-xl px-3 text-sm font-medium ring-1 transition ${
           hasWork
             ? "bg-amber-50 text-amber-800 ring-amber-300"
             : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
