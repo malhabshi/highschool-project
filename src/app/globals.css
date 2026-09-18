@@ -20,6 +20,53 @@ body {
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
 }
 
+/* ── Unified exam: PDF export via the browser's print dialog ──
+   The printable handout is only mounted while exporting. Isolating it by
+   visibility (rather than display) keeps the rule independent of the app
+   shell's markup, so the sidebar and controls drop out of the PDF. */
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-only,
+  .print-only * {
+    visibility: visible;
+  }
+  .print-only {
+    display: block !important;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 8px;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* Don't split a booklet page or a question across two sheets. */
+  .print-page {
+    width: 100%;
+    margin-bottom: 8px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .print-q {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+  .print-section {
+    break-before: page;
+    page-break-before: always;
+  }
+}
+
 /* Prevent iOS Safari from zooming in when a form field is focused on phones. */
 @media (max-width: 640px) {
   input,
