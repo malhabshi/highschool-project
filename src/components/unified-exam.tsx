@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuizQuestions, type QuizQuestion } from "@/lib/quiz";
-import { useExamSession } from "@/lib/exam-session";
+import { useExamSession, type Stroke } from "@/lib/exam-session";
 import { MathText } from "@/components/math-text";
+import { WorkArea } from "@/components/work-area";
+import { DrawingPreview } from "@/components/scratchpad";
 import lessonData from "@/data/lessons.json";
 
 const LETTERS = ["a", "b", "c", "d"];
@@ -18,37 +20,43 @@ type Lesson = {
 };
 const LESSONS = lessonData.lessons as Lesson[];
 
-type Tab = "study" | "classwork" | "quiz" | "review";
+type Session = ReturnType<typeof useExamSession>;
+
+// The page walks the booklet in its own order: each lesson's pages followed by
+// that lesson's exercises, then the final exam, then the teacher's review.
+type Step = { kind: "lesson"; lesson: Lesson } | { kind: "exam" } | { kind: "review" };
 
 export function UnifiedExam() {
   const { questions, loaded, error, setAnswer } = useQuizQuestions();
   const s = useExamSession();
-  const [tab, setTab] = useState<Tab>("study");
+  const [index, setIndex] = useState(0);
   const [printing, setPrinting] = useState(false);
 
-  const classWork = useMemo(
-    () => questions.filter((q) => q.topic !== QUIZ_TOPIC),
-    [questions]
+  const steps: Step[] = useMemo(
+    () => [
+      ...LESSONS.map((lesson) => ({ kind: "lesson" as const, lesson })),
+      { kind: "exam" as const },
+      { kind: "review" as const },
+    ],
+    []
   );
-  const quiz = useMemo(
+
+  const examQuestions = useMemo(
     () => questions.filter((q) => q.topic === QUIZ_TOPIC),
     [questions]
   );
 
-  // Mount the printable handout; the effect below prints once it's ready.
   function exportPdf() {
     setPrinting(true);
   }
 
-  // Mounting the handout is not enough — printing before the booklet scans have
-  // decoded produces a PDF full of blank boxes, so wait for them (with a cap so
-  // a single stalled image can't block the export).
+  // Printing before the booklet scans have decoded produces a PDF full of blank
+  // boxes, so wait for them (capped, so one stalled image can't block export).
   useEffect(() => {
     if (!printing) return;
     let cancelled = false;
 
     async function printWhenReady() {
-      // Let the handout commit and paint before looking for its images.
       await new Promise((r) => requestAnimationFrame(() => r(null)));
       const images = Array.from(
         document.querySelectorAll<HTMLImageElement>(".print-only img")
@@ -90,256 +98,255 @@ export function UnifiedExam() {
     );
   }
 
+  const step = steps[index];
+
   return (
     <div dir="rtl" className="space-y-4">
       <SessionBar s={s} onExport={exportPdf} />
-
-      <div className="no-print flex flex-wrap gap-2">
-        <TabButton current={tab} value="study" onClick={setTab}>
-          📚 الدراسة
-        </TabButton>
-        <TabButton current={tab} value="classwork" onClick={setTab}>
-          ✏️ العمل الصفي
-          <Count n={Object.keys(s.session.classWork).length} of={classWork.length} />
-        </TabButton>
-        <TabButton current={tab} value="quiz" onClick={setTab}>
-          📝 الاختبار
-          <Count n={Object.keys(s.session.quiz).length} of={quiz.length} />
-        </TabButton>
-        <TabButton current={tab} value="review" onClick={setTab}>
-          🔍 مراجعة الإجابات
-        </TabButton>
-      </div>
+      <Stepper steps={steps} index={index} onPick={setIndex} questions={questions} s={s} />
 
       <div className="no-print">
-        {tab === "study" && <Study />}
-        {tab === "classwork" && <ClassWork questions={classWork} s={s} />}
-        {tab === "quiz" && <Quiz questions={quiz} s={s} />}
-        {tab === "review" && <Review questions={questions} onConfirm={setAnswer} />}
+        {step.kind === "lesson" && (
+          <LessonStep lesson={step.lesson} questions={questions} s={s} />
+        )}
+        {step.kind === "exam" && <ExamStep questions={examQuestions} s={s} />}
+        {step.kind === "review" && (
+          <Review questions={questions} onConfirm={setAnswer} />
+        )}
       </div>
 
-      {printing && <PrintDocument classWork={classWork} quiz={quiz} />}
+      <Nav index={index} total={steps.length} onGo={setIndex} />
+
+      {printing && <PrintDocument questions={questions} s={s} />}
     </div>
   );
 }
 
-function Count({ n, of }: { n: number; of: number }) {
-  if (of === 0) return null;
-  return (
-    <span className="mr-2 rounded-full bg-white/25 px-2 py-0.5 text-xs">
-      {n}/{of}
-    </span>
-  );
-}
+// ───────────────────────── chrome ─────────────────────────
 
-function TabButton({
-  current,
-  value,
-  onClick,
-  children,
-}: {
-  current: Tab;
-  value: Tab;
-  onClick: (t: Tab) => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      onClick={() => onClick(value)}
-      className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
-        current === value
-          ? "bg-slate-800 text-white"
-          : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
-      }`}
-    >
-      {children}
-    </button>
-  );
-}
-
-// ───────────────────────── session controls ─────────────────────────
-
-function SessionBar({
+function Stepper({
+  steps,
+  index,
+  onPick,
+  questions,
   s,
-  onExport,
 }: {
-  s: ReturnType<typeof useExamSession>;
-  onExport: () => void;
+  steps: Step[];
+  index: number;
+  onPick: (i: number) => void;
+  questions: QuizQuestion[];
+  s: Session;
 }) {
   return (
-    <div className="no-print flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          checked={s.autoSave}
-          onChange={(e) => s.setAutoSave(e.target.checked)}
-          className="h-4 w-4"
-        />
-        حفظ تلقائي
-      </label>
+    <div className="no-print flex flex-wrap gap-2">
+      {steps.map((st, i) => {
+        const active = i === index;
+        let label: string;
+        let done = 0;
+        let total = 0;
 
-      {!s.autoSave && (
-        <button
-          onClick={s.saveNow}
-          className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          حفظ الآن
-        </button>
-      )}
+        if (st.kind === "lesson") {
+          label = st.lesson.title;
+          const items = questions.filter((q) => q.section === st.lesson.classWork);
+          total = items.length;
+          done = items.filter((q) => s.session.classWork[q.id] !== undefined).length;
+        } else if (st.kind === "exam") {
+          label = "📝 الاختبار النهائي";
+          const items = questions.filter((q) => q.topic === QUIZ_TOPIC);
+          total = items.length;
+          done = items.filter((q) => s.session.quiz[q.id] !== undefined).length;
+        } else {
+          label = "🔍 مراجعة المعلم";
+        }
 
-      <span className="text-xs text-slate-500">
-        {s.savedAt ? `آخر حفظ: ${new Date(s.savedAt).toLocaleString("ar")}` : "لم يُحفظ بعد"}
-      </span>
-
-      <div className="mr-auto flex gap-2">
-        <button
-          onClick={onExport}
-          className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          ⬇️ تصدير PDF
-        </button>
-        <button
-          onClick={() => {
-            if (confirm("بدء جلسة جديدة سيمسح كل الإجابات المحفوظة. هل أنت متأكد؟")) {
-              s.newSession();
-            }
-          }}
-          className="rounded-lg px-3 py-1.5 text-sm text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
-        >
-          🔄 جلسة جديدة
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ───────────────────────── study ─────────────────────────
-
-function Study() {
-  const [openId, setOpenId] = useState<string>(LESSONS[0]?.id ?? "");
-
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-slate-500">
-        اقرأ الدرس أولاً ثم انتقل إلى العمل الصفي لحل تمارينه.
-      </p>
-      {LESSONS.map((lesson) => {
-        const open = lesson.id === openId;
         return (
-          <div key={lesson.id} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-            <button
-              onClick={() => setOpenId(open ? "" : lesson.id)}
-              className="flex w-full items-center justify-between p-4 text-right hover:bg-slate-50"
-            >
-              <span>
-                <span className="font-semibold text-slate-800">{lesson.title}</span>
-                <span className="mr-2 text-sm text-slate-400">{lesson.titleEn}</span>
+          <button
+            key={i}
+            onClick={() => onPick(i)}
+            className={`rounded-lg px-3 py-2 text-sm font-medium transition ${
+              active
+                ? "bg-slate-800 text-white"
+                : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+            }`}
+          >
+            {st.kind === "lesson" && <span className="ml-1 opacity-60">{i + 1}.</span>}
+            {label}
+            {total > 0 && (
+              <span
+                className={`mr-2 rounded-full px-2 py-0.5 text-xs ${
+                  active ? "bg-white/20" : "bg-slate-100"
+                }`}
+              >
+                {done}/{total}
               </span>
-              <span className="text-sm text-slate-400">
-                {lesson.pages.length} صفحات {open ? "▲" : "▼"}
-              </span>
-            </button>
-
-            {open && (
-              <div className="space-y-3 border-t border-slate-100 bg-slate-50 p-3">
-                {lesson.pages.map((p) => (
-                  <img
-                    key={p}
-                    src={`/booklet/p${String(p).padStart(2, "0")}.jpg`}
-                    alt={`${lesson.title} — صفحة ${p}`}
-                    loading="lazy"
-                    className="mx-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-white shadow-sm"
-                  />
-                ))}
-              </div>
             )}
-          </div>
+          </button>
         );
       })}
     </div>
   );
 }
 
-// The questions table is readable by signed-in staff only, so an empty result
-// usually means the session expired rather than that there are no questions.
-// Say that instead of rendering a blank panel.
-function NoQuestions() {
+function Nav({
+  index,
+  total,
+  onGo,
+}: {
+  index: number;
+  total: number;
+  onGo: (i: number) => void;
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
-      <p className="font-medium text-slate-800">لا توجد أسئلة لعرضها.</p>
-      <p className="mt-1">
-        إما أن الأسئلة لم تُحمَّل بعد في قاعدة البيانات، أو أن جلسة الدخول انتهت.
-        جرّب تسجيل الدخول مرة أخرى، أو شغّل{" "}
-        <code className="rounded bg-slate-100 px-1">node scripts/seed-quiz.mjs</code>
-      </p>
-      <p className="mt-2 text-slate-500">
-        قسم «الدراسة» يعمل بدون قاعدة بيانات، فيمكنك المتابعة منه.
-      </p>
+    <div className="no-print flex justify-between">
+      <button
+        onClick={() => onGo(Math.max(0, index - 1))}
+        disabled={index === 0}
+        className="rounded-lg px-4 py-2 text-sm text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-40"
+      >
+        ← السابق
+      </button>
+      <button
+        onClick={() => {
+          onGo(Math.min(total - 1, index + 1));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }}
+        disabled={index === total - 1}
+        className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-40"
+      >
+        التالي →
+      </button>
     </div>
   );
 }
 
-// ───────────────────────── class work ─────────────────────────
+function SessionBar({ s, onExport }: { s: Session; onExport: () => void }) {
+  return (
+    <div className="no-print space-y-2">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
+        <label className="flex items-center gap-2 text-sm text-slate-700">
+          <input
+            type="checkbox"
+            checked={s.autoSave}
+            onChange={(e) => s.setAutoSave(e.target.checked)}
+            className="h-4 w-4"
+          />
+          حفظ تلقائي
+        </label>
 
-// Practice: answer at your own pace, feedback straight away, progress saved.
-function ClassWork({
+        {!s.autoSave && (
+          <button
+            onClick={s.saveNow}
+            className="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            حفظ الآن
+          </button>
+        )}
+
+        <span className="text-xs text-slate-500">
+          {s.savedAt
+            ? `آخر حفظ: ${new Date(s.savedAt).toLocaleString("ar")}`
+            : "لم يُحفظ بعد"}
+        </span>
+
+        <div className="mr-auto flex gap-2">
+          <button
+            onClick={onExport}
+            className="rounded-lg bg-slate-700 px-3 py-1.5 text-sm font-medium text-white hover:bg-slate-800"
+          >
+            ⬇️ تصدير PDF
+          </button>
+          <button
+            onClick={() => {
+              if (
+                confirm(
+                  "بدء جلسة جديدة سيمسح كل الإجابات والملاحظات والرسم. هل أنت متأكد؟"
+                )
+              ) {
+                s.newSession();
+              }
+            }}
+            className="rounded-lg px-3 py-1.5 text-sm text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+          >
+            🔄 جلسة جديدة
+          </button>
+        </div>
+      </div>
+
+      {s.storageError && (
+        <p className="rounded-lg border border-red-200 bg-red-50 p-2 text-sm text-red-700">
+          {s.storageError}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ───────────────────────── a lesson: study then solve ─────────────────────────
+
+function LessonStep({
+  lesson,
   questions,
   s,
 }: {
+  lesson: Lesson;
   questions: QuizQuestion[];
-  s: ReturnType<typeof useExamSession>;
+  s: Session;
 }) {
-  const sections = useMemo(() => {
-    const out: { title: string; items: QuizQuestion[] }[] = [];
-    for (const q of questions) {
-      const last = out[out.length - 1];
-      if (last && last.title === q.section) last.items.push(q);
-      else out.push({ title: q.section, items: [q] });
-    }
-    return out;
-  }, [questions]);
-
-  const [active, setActive] = useState(sections[0]?.title ?? "");
-  const current = sections.find((x) => x.title === active) ?? sections[0];
-  if (!current) return <NoQuestions />;
-
-  const done = current.items.filter((q) => s.session.classWork[q.id] !== undefined).length;
-  const right = current.items.filter(
+  const items = questions.filter((q) => q.section === lesson.classWork);
+  const noteKey = `lesson:${lesson.id}`;
+  const done = items.filter((q) => s.session.classWork[q.id] !== undefined).length;
+  const right = items.filter(
     (q) => s.session.classWork[q.id] === q.answerIndex
   ).length;
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap gap-2">
-        {sections.map((sec) => (
-          <button
-            key={sec.title}
-            onClick={() => setActive(sec.title)}
-            className={`rounded-lg px-3 py-1.5 text-sm transition ${
-              sec.title === active
-                ? "bg-blue-600 text-white"
-                : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            {sec.title}
-            <span className="mr-2 text-xs opacity-70">({sec.items.length})</span>
-          </button>
+      <div className="rounded-xl border border-slate-200 bg-white p-4">
+        <h2 className="text-xl font-bold text-slate-800">{lesson.title}</h2>
+        <p className="text-sm text-slate-400">{lesson.titleEn}</p>
+      </div>
+
+      {/* Study */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-500">📚 الدراسة</h3>
+        {lesson.pages.map((p) => (
+          <img
+            key={p}
+            src={`/booklet/p${String(p).padStart(2, "0")}.jpg`}
+            alt={`${lesson.title} — صفحة ${p}`}
+            loading="lazy"
+            className="mx-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-white shadow-sm"
+          />
         ))}
-      </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <WorkArea
+            note={s.session.notes[noteKey] ?? ""}
+            strokes={s.session.drawings[noteKey] ?? []}
+            onNote={(t) => s.setNote(noteKey, t)}
+            onStrokes={(d) => s.setDrawing(noteKey, d)}
+          />
+        </div>
+      </section>
 
-      <div className="rounded-lg bg-white p-3 text-sm text-slate-600 ring-1 ring-slate-200">
-        حللت {done} من {current.items.length} — الإجابات الصحيحة {right}
-      </div>
+      {/* Solve */}
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-slate-500">
+          ✏️ العمل الصفي — {lesson.classWork}
+        </h3>
 
-      {current.items.map((q, i) => (
-        <PracticeCard
-          key={q.id}
-          q={q}
-          index={i + 1}
-          choice={s.session.classWork[q.id]}
-          onChoose={(c) => s.answerClassWork(q.id, c)}
-        />
-      ))}
+        {items.length === 0 ? (
+          <NoQuestions />
+        ) : (
+          <>
+            <div className="rounded-lg bg-white p-3 text-sm text-slate-600 ring-1 ring-slate-200">
+              حللت {done} من {items.length} — الإجابات الصحيحة {right}
+            </div>
+            {items.map((q, i) => (
+              <PracticeCard key={q.id} q={q} index={i + 1} s={s} />
+            ))}
+          </>
+        )}
+      </section>
     </div>
   );
 }
@@ -347,15 +354,15 @@ function ClassWork({
 function PracticeCard({
   q,
   index,
-  choice,
-  onChoose,
+  s,
 }: {
   q: QuizQuestion;
   index: number;
-  choice: number | undefined;
-  onChoose: (c: number) => void;
+  s: Session;
 }) {
+  const choice = s.session.classWork[q.id];
   const answered = choice !== undefined;
+  const key = `q:${q.id}`;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -370,16 +377,15 @@ function PracticeCard({
 
       <div className="mt-3 grid gap-2 sm:grid-cols-2">
         {q.options.map((opt, i) => {
-          const isRight = i === q.answerIndex;
           let style = "bg-white ring-slate-200 hover:bg-slate-50";
-          if (answered && isRight) style = "bg-green-50 ring-green-400";
+          if (answered && i === q.answerIndex) style = "bg-green-50 ring-green-400";
           else if (answered && i === choice) style = "bg-red-50 ring-red-400";
 
           return (
             <button
               key={i}
               disabled={answered}
-              onClick={() => onChoose(i)}
+              onClick={() => s.answerClassWork(q.id, i)}
               className={`flex items-start gap-2 rounded-lg p-3 text-right ring-1 transition disabled:cursor-default ${style}`}
             >
               <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600">
@@ -403,23 +409,24 @@ function PracticeCard({
           هذه الإجابة غير مؤكدة من المذكرة وتحتاج مراجعة المعلم.
         </p>
       )}
+
+      <WorkArea
+        compact
+        note={s.session.notes[key] ?? ""}
+        strokes={s.session.drawings[key] ?? []}
+        onNote={(t) => s.setNote(key, t)}
+        onStrokes={(d) => s.setDrawing(key, d)}
+      />
     </div>
   );
 }
 
-// ───────────────────────── graded quiz ─────────────────────────
+// ───────────────────────── final exam ─────────────────────────
 
-// Answer everything, submit once, then see the grade and what went wrong.
-function Quiz({
-  questions,
-  s,
-}: {
-  questions: QuizQuestion[];
-  s: ReturnType<typeof useExamSession>;
-}) {
+function ExamStep({ questions, s }: { questions: QuizQuestion[]; s: Session }) {
   const answers = s.session.quiz;
   const submitted = s.session.submitted;
-  const answeredCount = questions.filter((q) => answers[q.id] !== undefined).length;
+  const answered = questions.filter((q) => answers[q.id] !== undefined).length;
   const score = questions.filter((q) => answers[q.id] === q.answerIndex).length;
   const pct = questions.length ? Math.round((score / questions.length) * 100) : 0;
 
@@ -441,23 +448,21 @@ function Quiz({
           >
             {pct}% — {pct >= 50 ? "ناجح" : "راسب"}
           </p>
-          <button
-            onClick={s.newSession}
-            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-          >
-            إعادة الاختبار (جلسة جديدة)
-          </button>
         </div>
       ) : (
-        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-4">
           <span className="text-sm text-slate-600">
-            أجبت على {answeredCount} من {questions.length}
+            أجبت على {answered} من {questions.length}
           </span>
           <button
             onClick={() => {
-              if (answeredCount < questions.length) {
-                if (!confirm(`لم تجب على ${questions.length - answeredCount} سؤال. تسليم الاختبار؟`)) return;
-              }
+              if (
+                answered < questions.length &&
+                !confirm(
+                  `لم تجب على ${questions.length - answered} سؤال. تسليم الاختبار؟`
+                )
+              )
+                return;
               s.submitQuiz();
             }}
             className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
@@ -467,58 +472,85 @@ function Quiz({
         </div>
       )}
 
-      {questions.map((q, i) => (
-        <div key={q.id} className="rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex items-center justify-between text-xs text-slate-500">
-            <span>سؤال {i + 1}</span>
-            <span>صفحة {q.sourcePage}</span>
+      {questions.map((q, i) => {
+        const key = `q:${q.id}`;
+        return (
+          <div key={q.id} className="rounded-xl border border-slate-200 bg-white p-4">
+            <div className="flex items-center justify-between text-xs text-slate-500">
+              <span>سؤال {i + 1}</span>
+              <span>صفحة {q.sourcePage}</span>
+            </div>
+
+            <div className="mt-2 text-lg leading-relaxed text-slate-800">
+              <MathText text={q.body} />
+            </div>
+
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              {q.options.map((opt, oi) => {
+                const picked = answers[q.id] === oi;
+                let style = "bg-white ring-slate-200 hover:bg-slate-50";
+                if (submitted && oi === q.answerIndex) style = "bg-green-50 ring-green-400";
+                else if (submitted && picked) style = "bg-red-50 ring-red-400";
+                else if (!submitted && picked) style = "bg-blue-50 ring-blue-400";
+
+                return (
+                  <button
+                    key={oi}
+                    disabled={submitted}
+                    onClick={() => s.answerQuiz(q.id, oi)}
+                    className={`flex items-start gap-2 rounded-lg p-3 text-right ring-1 transition disabled:cursor-default ${style}`}
+                  >
+                    <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600">
+                      {LETTERS[oi]}
+                    </span>
+                    <span className="text-slate-800">
+                      <MathText text={opt} />
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {submitted && q.work && (
+              <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
+                طريقة الحل: {q.work}
+              </p>
+            )}
+
+            <WorkArea
+              compact
+              note={s.session.notes[key] ?? ""}
+              strokes={s.session.drawings[key] ?? []}
+              onNote={(t) => s.setNote(key, t)}
+              onStrokes={(d) => s.setDrawing(key, d)}
+            />
           </div>
-
-          <div className="mt-2 text-lg leading-relaxed text-slate-800">
-            <MathText text={q.body} />
-          </div>
-
-          <div className="mt-3 grid gap-2 sm:grid-cols-2">
-            {q.options.map((opt, oi) => {
-              const picked = answers[q.id] === oi;
-              let style = "bg-white ring-slate-200 hover:bg-slate-50";
-              if (submitted && oi === q.answerIndex) style = "bg-green-50 ring-green-400";
-              else if (submitted && picked) style = "bg-red-50 ring-red-400";
-              else if (!submitted && picked) style = "bg-blue-50 ring-blue-400";
-
-              return (
-                <button
-                  key={oi}
-                  disabled={submitted}
-                  onClick={() => s.answerQuiz(q.id, oi)}
-                  className={`flex items-start gap-2 rounded-lg p-3 text-right ring-1 transition disabled:cursor-default ${style}`}
-                >
-                  <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs text-slate-600">
-                    {LETTERS[oi]}
-                  </span>
-                  <span className="text-slate-800">
-                    <MathText text={opt} />
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {submitted && q.work && (
-            <p className="mt-3 rounded-lg bg-slate-50 p-3 text-sm text-slate-600">
-              طريقة الحل: {q.work}
-            </p>
-          )}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-// ───────────────────────── teacher review ─────────────────────────
+// ───────────────────────── shared ─────────────────────────
 
-// Kept from the previous version: 109 answers were worked out rather than taken
-// from the booklet's key, and still need a teacher to confirm them.
+// quiz_questions is readable by signed-in staff only, so an empty result
+// usually means the session expired rather than that there are no questions.
+function NoQuestions() {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-600">
+      <p className="font-medium text-slate-800">لا توجد أسئلة لعرضها.</p>
+      <p className="mt-1">
+        إما أن الأسئلة لم تُحمَّل بعد في قاعدة البيانات، أو أن جلسة الدخول انتهت.
+        جرّب تسجيل الدخول مرة أخرى، أو شغّل{" "}
+        <code className="rounded bg-slate-100 px-1">node scripts/seed-quiz.mjs</code>
+      </p>
+      <p className="mt-2 text-slate-500">
+        قسم «الدراسة» يعمل بدون قاعدة بيانات، فيمكنك المتابعة منه.
+      </p>
+    </div>
+  );
+}
+
 function Review({
   questions,
   onConfirm,
@@ -531,7 +563,8 @@ function Review({
   return (
     <div className="space-y-3">
       <p className="text-sm text-slate-600">
-        {pending.length} إجابة تحتاج تأكيد المعلم. اضغط على الخيار الصحيح لتصحيحه، أو أكّد الإجابة الحالية.
+        {pending.length} إجابة تحتاج تأكيد المعلم. اضغط على الخيار الصحيح لتصحيحه، أو
+        أكّد الإجابة الحالية.
       </p>
       {pending.map((q) => (
         <div key={q.id} className="rounded-xl border border-amber-200 bg-amber-50/40 p-4">
@@ -581,15 +614,11 @@ function Review({
 
 // ───────────────────────── printable handout ─────────────────────────
 
-// Only mounted while exporting. Contains the whole booklet — lessons as page
-// images followed by every question — so "Save as PDF" gives a study handout.
-function PrintDocument({
-  classWork,
-  quiz,
-}: {
-  classWork: QuizQuestion[];
-  quiz: QuizQuestion[];
-}) {
+// Only mounted while exporting. Follows the same booklet order as the page and
+// carries the student's notes and pencil work through into the PDF.
+function PrintDocument({ questions, s }: { questions: QuizQuestion[]; s: Session }) {
+  const exam = questions.filter((q) => q.topic === QUIZ_TOPIC);
+
   return (
     <div className="print-only" dir="rtl">
       <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 4 }}>الاختبار الموحد</h1>
@@ -597,36 +626,53 @@ function PrintDocument({
         قدرات الرياضيات — مذكرة أ. محمد جمعة العساف
       </p>
 
-      {LESSONS.map((lesson) => (
-        <section key={lesson.id} className="print-section">
-          <h2 style={{ fontSize: 19, fontWeight: 700, margin: "14px 0 8px" }}>
-            {lesson.title}
-          </h2>
-          {lesson.pages.map((p) => (
-            <img
-              key={p}
-              src={`/booklet/p${String(p).padStart(2, "0")}.jpg`}
-              alt=""
-              className="print-page"
+      {LESSONS.map((lesson) => {
+        const items = questions.filter((q) => q.section === lesson.classWork);
+        const key = `lesson:${lesson.id}`;
+        return (
+          <section key={lesson.id} className="print-section">
+            <h2 style={{ fontSize: 19, fontWeight: 700, margin: "14px 0 8px" }}>
+              {lesson.title}
+            </h2>
+            {lesson.pages.map((p) => (
+              <img
+                key={p}
+                src={`/booklet/p${String(p).padStart(2, "0")}.jpg`}
+                alt=""
+                className="print-page"
+              />
+            ))}
+            <PrintWork
+              note={s.session.notes[key] ?? ""}
+              strokes={s.session.drawings[key] ?? []}
             />
-          ))}
-        </section>
-      ))}
+            {items.map((q, i) => (
+              <PrintQuestion key={q.id} q={q} index={i + 1} s={s} />
+            ))}
+          </section>
+        );
+      })}
 
-      <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 22 }}>العمل الصفي</h2>
-      {classWork.map((q, i) => (
-        <PrintQuestion key={q.id} q={q} index={i + 1} />
-      ))}
-
-      <h2 style={{ fontSize: 22, fontWeight: 700, marginTop: 22 }}>الاختبار</h2>
-      {quiz.map((q, i) => (
-        <PrintQuestion key={q.id} q={q} index={i + 1} />
-      ))}
+      <section className="print-section">
+        <h2 style={{ fontSize: 22, fontWeight: 700 }}>الاختبار النهائي</h2>
+        {exam.map((q, i) => (
+          <PrintQuestion key={q.id} q={q} index={i + 1} s={s} />
+        ))}
+      </section>
     </div>
   );
 }
 
-function PrintQuestion({ q, index }: { q: QuizQuestion; index: number }) {
+function PrintQuestion({
+  q,
+  index,
+  s,
+}: {
+  q: QuizQuestion;
+  index: number;
+  s: Session;
+}) {
+  const key = `q:${q.id}`;
   return (
     <div className="print-q">
       <div style={{ fontSize: 15, marginBottom: 6 }}>
@@ -639,6 +685,27 @@ function PrintQuestion({ q, index }: { q: QuizQuestion; index: number }) {
           </div>
         ))}
       </div>
+      <PrintWork
+        note={s.session.notes[key] ?? ""}
+        strokes={s.session.drawings[key] ?? []}
+      />
+    </div>
+  );
+}
+
+function PrintWork({ note, strokes }: { note: string; strokes: Stroke[] }) {
+  const hasNote = note.trim().length > 0;
+  if (!hasNote && strokes.length === 0) return null;
+  return (
+    <div style={{ marginTop: 6, paddingInlineStart: 10, borderInlineStart: "3px solid #cbd5e1" }}>
+      {hasNote && (
+        <p style={{ fontSize: 13, color: "#334155", whiteSpace: "pre-wrap" }}>{note}</p>
+      )}
+      {strokes.length > 0 && (
+        <div style={{ maxWidth: 520 }}>
+          <DrawingPreview strokes={strokes} />
+        </div>
+      )}
     </div>
   );
 }

@@ -2,24 +2,39 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+// One freehand stroke. Points are flattened [x,y,x,y,…] in the pad's own
+// 1000×600 coordinate space, so a drawing made on a phone still lines up when
+// the same session is opened on a tablet or printed.
+export type Stroke = { c: string; w: number; p: number[] };
+
 // A student's progress through the unified exam. Kept in the browser so work
-// survives a refresh or an accidental tab close without needing a login per
-// student. "Start a new session" clears it.
+// survives a refresh without needing a login per student.
 export type Session = {
   startedAt: string;
-  // question id -> chosen option index, for the class-work section
+  // question id -> chosen option index, for the lesson exercises
   classWork: Record<string, number>;
-  // question id -> chosen option index, for the graded quiz
+  // question id -> chosen option index, for the graded exam
   quiz: Record<string, number>;
-  // once submitted the quiz is locked and the grade is shown
+  // once submitted the exam is locked and the grade is shown
   submitted: boolean;
+  // typed notes, keyed "lesson:<id>" or "q:<questionId>"
+  notes: Record<string, string>;
+  // pencil work, keyed the same way
+  drawings: Record<string, Stroke[]>;
 };
 
-const KEY = "unified-exam-session-v1";
+const KEY = "unified-exam-session-v2";
 const AUTOSAVE_KEY = "unified-exam-autosave-v1";
 
 function emptySession(startedAt: string): Session {
-  return { startedAt, classWork: {}, quiz: {}, submitted: false };
+  return {
+    startedAt,
+    classWork: {},
+    quiz: {},
+    submitted: false,
+    notes: {},
+    drawings: {},
+  };
 }
 
 export function useExamSession() {
@@ -38,12 +53,14 @@ export function useExamSession() {
 
       const raw = window.localStorage.getItem(KEY);
       if (raw) {
-        const parsed = JSON.parse(raw) as Session;
+        const parsed = JSON.parse(raw) as Partial<Session>;
         setSession({
           startedAt: parsed.startedAt ?? new Date().toISOString(),
           classWork: parsed.classWork ?? {},
           quiz: parsed.quiz ?? {},
           submitted: Boolean(parsed.submitted),
+          notes: parsed.notes ?? {},
+          drawings: parsed.drawings ?? {},
         });
         setSavedAt(parsed.startedAt ?? null);
       } else {
@@ -56,6 +73,23 @@ export function useExamSession() {
     setLoaded(true);
   }, []);
 
+  const [storageError, setStorageError] = useState<string | null>(null);
+
+  const persist = useCallback((next: Session) => {
+    try {
+      window.localStorage.setItem(KEY, JSON.stringify(next));
+      setSavedAt(new Date().toISOString());
+      setStorageError(null);
+      return true;
+    } catch {
+      // Pencil drawings are the one thing here big enough to fill the quota.
+      setStorageError(
+        "تعذّر الحفظ — مساحة التخزين ممتلئة. امسح بعض الرسم بالقلم أو ابدأ جلسة جديدة."
+      );
+      return false;
+    }
+  }, []);
+
   // Persist on every change while auto-save is on.
   useEffect(() => {
     if (!loaded) return;
@@ -64,13 +98,8 @@ export function useExamSession() {
       return;
     }
     if (!autoSave) return;
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(session));
-      setSavedAt(new Date().toISOString());
-    } catch {
-      // Out of quota or private mode — keep working, just don't persist.
-    }
-  }, [session, autoSave, loaded]);
+    persist(session);
+  }, [session, autoSave, loaded, persist]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -91,14 +120,22 @@ export function useExamSession() {
     );
   }, []);
 
+  const setNote = useCallback((key: string, text: string) => {
+    setSession((s) => ({ ...s, notes: { ...s.notes, [key]: text } }));
+  }, []);
+
+  const setDrawing = useCallback((key: string, strokes: Stroke[]) => {
+    setSession((s) => ({ ...s, drawings: { ...s.drawings, [key]: strokes } }));
+  }, []);
+
   const submitQuiz = useCallback(() => {
     setSession((s) => ({ ...s, submitted: true }));
   }, []);
 
   const newSession = useCallback(() => {
-    const fresh = emptySession(new Date().toISOString());
-    setSession(fresh);
+    setSession(emptySession(new Date().toISOString()));
     setSavedAt(null);
+    setStorageError(null);
     try {
       window.localStorage.removeItem(KEY);
     } catch {
@@ -107,14 +144,7 @@ export function useExamSession() {
   }, []);
 
   // Explicit save, for when auto-save is switched off.
-  const saveNow = useCallback(() => {
-    try {
-      window.localStorage.setItem(KEY, JSON.stringify(session));
-      setSavedAt(new Date().toISOString());
-    } catch {
-      /* ignore */
-    }
-  }, [session]);
+  const saveNow = useCallback(() => persist(session), [persist, session]);
 
   return {
     session,
@@ -122,8 +152,11 @@ export function useExamSession() {
     autoSave,
     setAutoSave,
     savedAt,
+    storageError,
     answerClassWork,
     answerQuiz,
+    setNote,
+    setDrawing,
     submitQuiz,
     newSession,
     saveNow,
