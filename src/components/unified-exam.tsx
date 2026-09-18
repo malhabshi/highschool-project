@@ -5,7 +5,14 @@ import { useQuizQuestions, type QuizQuestion } from "@/lib/quiz";
 import { useExamSession, type Stroke } from "@/lib/exam-session";
 import { MathText } from "@/components/math-text";
 import { WorkArea } from "@/components/work-area";
-import { DrawingPreview } from "@/components/scratchpad";
+import {
+  DrawingPreview,
+  DrawSurface,
+  PenToolbar,
+  StrokePaths,
+  useDrawTools,
+  PAGE,
+} from "@/components/scratchpad";
 import lessonData from "@/data/lessons.json";
 
 const LETTERS = ["a", "b", "c", "d"];
@@ -306,19 +313,16 @@ function LessonStep({
         <p className="text-sm text-slate-400">{lesson.titleEn}</p>
       </div>
 
-      {/* Study */}
+      {/* Study — every page can be written on and annotated, questions or not */}
       <section className="space-y-3">
         <h3 className="text-sm font-semibold text-slate-500">📚 الدراسة</h3>
         {lesson.pages.map((p) => (
-          <img
-            key={p}
-            src={`/booklet/p${String(p).padStart(2, "0")}.jpg`}
-            alt={`${lesson.title} — صفحة ${p}`}
-            loading="lazy"
-            className="mx-auto w-full max-w-3xl rounded-lg border border-slate-200 bg-white shadow-sm"
-          />
+          <AnnotatablePage key={p} page={p} title={lesson.title} s={s} />
         ))}
         <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <p className="mb-1 text-sm font-medium text-slate-700">
+            ملاحظات عامة على الدرس
+          </p>
           <WorkArea
             note={s.session.notes[noteKey] ?? ""}
             strokes={s.session.drawings[noteKey] ?? []}
@@ -347,6 +351,101 @@ function LessonStep({
           </>
         )}
       </section>
+    </div>
+  );
+}
+
+// A lesson page you can write straight onto, plus its own notes. Writing is
+// off by default: a transparent overlay that always captured pointers would
+// stop the page scrolling on a tablet, so the student turns it on to write and
+// off to scroll. Existing marks stay visible either way.
+function AnnotatablePage({
+  page,
+  title,
+  s,
+}: {
+  page: number;
+  title: string;
+  s: Session;
+}) {
+  const key = `page:${page}`;
+  const tools = useDrawTools();
+  const [writing, setWriting] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(false);
+
+  const strokes = s.session.drawings[key] ?? [];
+  const note = s.session.notes[key] ?? "";
+  const hasNote = note.trim().length > 0;
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-2">
+      <div className="no-print mb-2 flex flex-wrap items-center gap-2">
+        <span className="text-xs text-slate-500">صفحة {page}</span>
+
+        <button
+          type="button"
+          onClick={() => setWriting(!writing)}
+          className={`rounded-lg px-3 py-1.5 text-sm ring-1 transition ${
+            writing
+              ? "bg-blue-600 text-white ring-blue-600"
+              : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          {writing ? "✏️ إيقاف الكتابة" : "✏️ الكتابة على الصفحة"}
+          {!writing && strokes.length > 0 && (
+            <span className="mr-2 text-xs text-amber-700">✏️{strokes.length}</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setNotesOpen(!notesOpen)}
+          className={`rounded-lg px-3 py-1.5 text-sm ring-1 transition ${
+            hasNote
+              ? "bg-amber-50 text-amber-800 ring-amber-300"
+              : "bg-white text-slate-600 ring-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          📝 ملاحظات الصفحة {hasNote && "✍️"}
+        </button>
+
+        {writing && (
+          <PenToolbar
+            tools={tools}
+            strokes={strokes}
+            onChange={(d) => s.setDrawing(key, d)}
+          />
+        )}
+      </div>
+
+      <div className="relative mx-auto w-full max-w-3xl">
+        <img
+          src={`/booklet/p${String(page).padStart(2, "0")}.jpg`}
+          alt={`${title} — صفحة ${page}`}
+          loading="lazy"
+          className="block w-full rounded-lg border border-slate-200 bg-white"
+        />
+        <DrawSurface
+          width={PAGE.w}
+          height={PAGE.h}
+          strokes={strokes}
+          onChange={(d) => s.setDrawing(key, d)}
+          tools={tools}
+          enabled={writing}
+          className="absolute inset-0 h-full w-full rounded-lg"
+          style={writing ? { boxShadow: "0 0 0 2px #2563eb inset" } : undefined}
+        />
+      </div>
+
+      {notesOpen && (
+        <textarea
+          value={note}
+          onChange={(e) => s.setNote(key, e.target.value)}
+          rows={3}
+          placeholder={`ملاحظاتك على صفحة ${page}…`}
+          className="no-print mt-2 w-full rounded-lg border border-slate-300 p-2 text-sm text-slate-800 outline-none focus:border-blue-500"
+        />
+      )}
     </div>
   );
 }
@@ -635,11 +734,11 @@ function PrintDocument({ questions, s }: { questions: QuizQuestion[]; s: Session
               {lesson.title}
             </h2>
             {lesson.pages.map((p) => (
-              <img
+              <PrintPage
                 key={p}
-                src={`/booklet/p${String(p).padStart(2, "0")}.jpg`}
-                alt=""
-                className="print-page"
+                page={p}
+                strokes={s.session.drawings[`page:${p}`] ?? []}
+                note={s.session.notes[`page:${p}`] ?? ""}
               />
             ))}
             <PrintWork
@@ -689,6 +788,53 @@ function PrintQuestion({
         note={s.session.notes[key] ?? ""}
         strokes={s.session.drawings[key] ?? []}
       />
+    </div>
+  );
+}
+
+// A lesson page in the handout, with anything written on it burnt in on top and
+// its own notes printed underneath.
+function PrintPage({
+  page,
+  strokes,
+  note,
+}: {
+  page: number;
+  strokes: Stroke[];
+  note: string;
+}) {
+  return (
+    <div className="print-q">
+      <div style={{ position: "relative" }}>
+        <img
+          src={`/booklet/p${String(page).padStart(2, "0")}.jpg`}
+          alt=""
+          className="print-page"
+        />
+        {strokes.length > 0 && (
+          <svg
+            viewBox={`0 0 ${PAGE.w} ${PAGE.h}`}
+            preserveAspectRatio="none"
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          >
+            <StrokePaths strokes={strokes} />
+          </svg>
+        )}
+      </div>
+      {note.trim().length > 0 && (
+        <p
+          style={{
+            fontSize: 13,
+            color: "#334155",
+            whiteSpace: "pre-wrap",
+            marginTop: 4,
+            paddingInlineStart: 10,
+            borderInlineStart: "3px solid #cbd5e1",
+          }}
+        >
+          <b>صفحة {page}:</b> {note}
+        </p>
+      )}
     </div>
   );
 }
