@@ -1141,7 +1141,63 @@ function PrintDocument({
           <PrintQuestion key={q.id} q={q} index={i + 1} mode={mode} s={s} />
         ))}
       </section>
+
+      {mode === "solved" && <AnswerKey questions={questions} />}
     </div>
+  );
+}
+
+// A one-page summary of every answer, so a teacher can check a whole section
+// at a glance instead of paging through the full solutions. Mirrors the layout
+// of the booklet's own key on page 77.
+function AnswerKey({ questions }: { questions: QuizQuestion[] }) {
+  const sections: { title: string; items: QuizQuestion[] }[] = [];
+  for (const q of questions) {
+    const last = sections[sections.length - 1];
+    if (last && last.title === q.section) last.items.push(q);
+    else sections.push({ title: q.section, items: [q] });
+  }
+
+  return (
+    <section className="print-section">
+      <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 2 }}>
+        مفتاح الإجابات
+      </h2>
+      <p style={{ fontSize: 12, color: "#555", marginBottom: 10 }}>
+        ⚠ = إجابة تم حلها ولم تُؤخذ من مفتاح المذكرة، تحتاج مراجعتك.
+      </p>
+
+      {sections.map((sec) => (
+        <div key={sec.title} className="print-q" style={{ marginBottom: 10 }}>
+          <p style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>
+            {sec.title}
+          </p>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(10, 1fr)",
+              gap: 3,
+              fontSize: 12,
+            }}
+          >
+            {sec.items.map((q, i) => (
+              <div
+                key={q.id}
+                style={{
+                  border: "1px solid #cbd5e1",
+                  padding: "2px 3px",
+                  textAlign: "center",
+                }}
+              >
+                <span style={{ color: "#64748b" }}>{i + 1}</span>{" "}
+                <b>{LETTERS[q.answerIndex]}</b>
+                {!q.verified && <span style={{ color: "#b45309" }}> ⚠</span>}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
   );
 }
 
