@@ -45,11 +45,17 @@ const accentFor = (i: number) => ACCENTS[i % ACCENTS.length];
 
 type Step = { kind: "lesson"; lesson: Lesson } | { kind: "exam" } | { kind: "review" };
 
+// Which document to export.
+//   blank  — questions only, with space to work: what a student sits down with
+//   solved — answers marked and the full working shown: what a teacher checks
+//   work   — the student's own notes and pencil marks
+export type PrintMode = "blank" | "solved" | "work";
+
 export function UnifiedExam() {
   const { questions, loaded, error, setAnswer } = useQuizQuestions();
   const s = useExamSession();
   const [index, setIndex] = useState(0);
-  const [printing, setPrinting] = useState(false);
+  const [printing, setPrinting] = useState<PrintMode | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const steps: Step[] = useMemo(
@@ -71,6 +77,11 @@ export function UnifiedExam() {
   const overallPct = questions.length
     ? Math.round((totalAnswered / questions.length) * 100)
     : 0;
+
+  // Mount the chosen handout; the effect below prints it once it's ready.
+  function exportPdf(mode: PrintMode) {
+    setPrinting(mode);
+  }
 
   useEffect(() => {
     if (!printing) return;
@@ -96,7 +107,7 @@ export function UnifiedExam() {
       ]);
       if (cancelled) return;
       window.print();
-      setPrinting(false);
+      setPrinting(null);
     }
 
     printWhenReady();
@@ -139,7 +150,7 @@ export function UnifiedExam() {
         s={s}
         menuOpen={menuOpen}
         setMenuOpen={setMenuOpen}
-        onExport={() => setPrinting(true)}
+        onExport={exportPdf}
       />
 
       <LessonRail steps={steps} index={index} onPick={goTo} questions={questions} s={s} />
@@ -159,7 +170,7 @@ export function UnifiedExam() {
 
       <BottomNav index={index} steps={steps} onGo={goTo} />
 
-      {printing && <PrintDocument questions={questions} s={s} />}
+      {printing && <PrintDocument mode={printing} questions={questions} s={s} />}
     </div>
   );
 }
@@ -181,7 +192,7 @@ function Header({
   s: Session;
   menuOpen: boolean;
   setMenuOpen: (v: boolean) => void;
-  onExport: () => void;
+  onExport: (m: PrintMode) => void;
 }) {
   return (
     <div className="no-print overflow-hidden rounded-2xl bg-gradient-to-l from-blue-600 to-indigo-700 text-white shadow-lg">
@@ -236,7 +247,15 @@ function Header({
             {!s.autoSave && (
               <MenuButton onClick={s.saveNow}>💾 حفظ الآن</MenuButton>
             )}
-            <MenuButton onClick={onExport}>⬇️ تصدير PDF</MenuButton>
+            <MenuButton onClick={() => onExport("blank")}>
+              📄 تصدير نسخة فارغة
+            </MenuButton>
+            <MenuButton onClick={() => onExport("solved")}>
+              ✅ تصدير نسخة محلولة
+            </MenuButton>
+            <MenuButton onClick={() => onExport("work")}>
+              ✍️ تصدير عملي
+            </MenuButton>
             <MenuButton
               onClick={() => {
                 if (confirm("بدء جلسة جديدة سيمسح كل الإجابات والملاحظات والرسم. متأكد؟")) {
@@ -1040,15 +1059,47 @@ function Review({
 
 // ───────────────────────── printable handout ─────────────────────────
 
-function PrintDocument({ questions, s }: { questions: QuizQuestion[]; s: Session }) {
+function PrintDocument({
+  mode,
+  questions,
+  s,
+}: {
+  mode: PrintMode;
+  questions: QuizQuestion[];
+  s: Session;
+}) {
   const exam = questions.filter((q) => q.topic === QUIZ_TOPIC);
+  const unverified = questions.filter((q) => !q.verified).length;
+
+  const TITLES: Record<PrintMode, string> = {
+    blank: "نسخة للحل",
+    solved: "نسخة المعلم — مع الإجابات وطريقة الحل",
+    work: "عملي — ملاحظاتي وحلولي",
+  };
 
   return (
     <div className="print-only" dir="rtl">
-      <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 4 }}>الاختبار الموحد</h1>
-      <p style={{ color: "#555", marginBottom: 18 }}>
+      <h1 style={{ fontSize: 26, fontWeight: 700, marginBottom: 2 }}>الاختبار الموحد</h1>
+      <p style={{ color: "#555", marginBottom: 4 }}>
         قدرات الرياضيات — مذكرة أ. محمد جمعة العساف
       </p>
+      <p style={{ fontWeight: 700, marginBottom: 14 }}>{TITLES[mode]}</p>
+
+      {mode === "solved" && unverified > 0 && (
+        <p
+          style={{
+            border: "1px solid #f59e0b",
+            background: "#fffbeb",
+            padding: 8,
+            marginBottom: 14,
+            fontSize: 13,
+          }}
+        >
+          <b>ملاحظة للمعلم:</b> {unverified} إجابة من أصل {questions.length} لم تُؤخذ من
+          مفتاح المذكرة (صفحة 77) بل تم حلها، وهي معلّمة بـ «تحتاج مراجعة». الباقي
+          مؤكد من المفتاح.
+        </p>
+      )}
 
       {LESSONS.map((lesson) => {
         const items = questions.filter((q) => q.section === lesson.classWork);
@@ -1058,20 +1109,27 @@ function PrintDocument({ questions, s }: { questions: QuizQuestion[]; s: Session
             <h2 style={{ fontSize: 19, fontWeight: 700, margin: "14px 0 8px" }}>
               {lesson.title}
             </h2>
-            {lesson.pages.map((p) => (
-              <PrintPage
-                key={p}
-                page={p}
-                strokes={s.session.drawings[`page:${p}`] ?? []}
-                note={s.session.notes[`page:${p}`] ?? ""}
+
+            {/* The lesson pages are study material, not part of a blank paper. */}
+            {mode !== "blank" &&
+              lesson.pages.map((p) => (
+                <PrintPage
+                  key={p}
+                  page={p}
+                  strokes={mode === "work" ? s.session.drawings[`page:${p}`] ?? [] : []}
+                  note={mode === "work" ? s.session.notes[`page:${p}`] ?? "" : ""}
+                />
+              ))}
+
+            {mode === "work" && (
+              <PrintWork
+                note={s.session.notes[key] ?? ""}
+                strokes={s.session.drawings[key] ?? []}
               />
-            ))}
-            <PrintWork
-              note={s.session.notes[key] ?? ""}
-              strokes={s.session.drawings[key] ?? []}
-            />
+            )}
+
             {items.map((q, i) => (
-              <PrintQuestion key={q.id} q={q} index={i + 1} s={s} />
+              <PrintQuestion key={q.id} q={q} index={i + 1} mode={mode} s={s} />
             ))}
           </section>
         );
@@ -1080,7 +1138,7 @@ function PrintDocument({ questions, s }: { questions: QuizQuestion[]; s: Session
       <section className="print-section">
         <h2 style={{ fontSize: 22, fontWeight: 700 }}>الاختبار النهائي</h2>
         {exam.map((q, i) => (
-          <PrintQuestion key={q.id} q={q} index={i + 1} s={s} />
+          <PrintQuestion key={q.id} q={q} index={i + 1} mode={mode} s={s} />
         ))}
       </section>
     </div>
@@ -1138,24 +1196,79 @@ function PrintPage({
   );
 }
 
-function PrintQuestion({ q, index, s }: { q: QuizQuestion; index: number; s: Session }) {
+function PrintQuestion({
+  q,
+  index,
+  mode,
+  s,
+}: {
+  q: QuizQuestion;
+  index: number;
+  mode: PrintMode;
+  s: Session;
+}) {
   const key = `q:${q.id}`;
+  const letters = LETTERS;
+
   return (
     <div className="print-q">
       <div style={{ fontSize: 15, marginBottom: 6 }}>
         <b>{index}.</b> <MathText text={q.body} />
+        {mode === "solved" && !q.verified && (
+          <span style={{ color: "#b45309", fontSize: 12 }}> — تحتاج مراجعة</span>
+        )}
       </div>
+
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 4 }}>
-        {q.options.map((opt, i) => (
-          <div key={i} style={{ fontSize: 14 }}>
-            <b>{LETTERS[i]})</b> <MathText text={opt} />
-          </div>
-        ))}
+        {q.options.map((opt, i) => {
+          const right = mode === "solved" && i === q.answerIndex;
+          return (
+            <div
+              key={i}
+              style={{
+                fontSize: 14,
+                fontWeight: right ? 700 : 400,
+                // A printed page may be photocopied in black and white, so the
+                // correct option is marked with a tick, not colour alone.
+                background: right ? "#dcfce7" : "transparent",
+                padding: right ? "1px 4px" : undefined,
+              }}
+            >
+              <b>{letters[i]})</b> <MathText text={opt} />
+              {right && " ✓"}
+            </div>
+          );
+        })}
       </div>
-      <PrintWork
-        note={s.session.notes[key] ?? ""}
-        strokes={s.session.drawings[key] ?? []}
-      />
+
+      {mode === "solved" && q.steps.length > 0 && (
+        <ol style={{ margin: "6px 10px 0", fontSize: 13, color: "#1e293b" }}>
+          {q.steps.map((step, i) => (
+            <li key={i} style={{ marginBottom: 2 }}>
+              <MathText text={step} />
+            </li>
+          ))}
+        </ol>
+      )}
+
+      {/* Room to work the question out by hand. */}
+      {mode === "blank" && (
+        <div
+          style={{
+            height: 90,
+            border: "1px dashed #cbd5e1",
+            borderRadius: 6,
+            marginTop: 6,
+          }}
+        />
+      )}
+
+      {mode === "work" && (
+        <PrintWork
+          note={s.session.notes[key] ?? ""}
+          strokes={s.session.drawings[key] ?? []}
+        />
+      )}
     </div>
   );
 }
