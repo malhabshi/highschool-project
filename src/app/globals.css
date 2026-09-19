@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Maths rendering for the quiz questions (KaTeX). */
+@import "katex/dist/katex.min.css";
 
 :root {
   --background: #f1f5f9;
@@ -16,6 +18,62 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* ── Unified exam: PDF export via the browser's print dialog ──
+   The printable handout is only mounted while exporting. Isolating it by
+   visibility (rather than display) keeps the rule independent of the app
+   shell's markup, so the sidebar and controls drop out of the PDF. */
+.print-only {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-only,
+  .print-only * {
+    visibility: visible;
+  }
+  .print-only {
+    display: block !important;
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 8px;
+  }
+  .no-print {
+    display: none !important;
+  }
+  /* Don't split a booklet page or a question across two sheets. */
+  .print-page {
+    width: 100%;
+    margin-bottom: 8px;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .print-q {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #eee;
+  }
+  /* A transcribed lesson page. Tables and headings shouldn't be orphaned, but
+     the page itself may be taller than one sheet, so only the parts are kept
+     together rather than the whole thing. */
+  .print-content table,
+  .print-content h4,
+  .print-content li {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .print-section {
+    break-before: page;
+    page-break-before: always;
+  }
 }
 
 /* Prevent iOS Safari from zooming in when a form field is focused on phones. */

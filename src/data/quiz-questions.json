@@ -1,0 +1,2071 @@
+{
+  "_source": "مذكرة القدرات — قدرات الرياضيات، أ. محمد جمعة العساف (77 pages)",
+  "_answers": "verified=true means the booklet's own answer key (page 77) confirms it. verified=false means the answer was worked out and still needs a human check.",
+  "_options": "Always four choices in the printed order a, b, c, d. answerIndex: 0=a, 1=b, 2=c, 3=d.",
+  "questions": [
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 7,
+      "number": 1,
+      "body": "احسب: $\\sqrt[3]{192}-\\sqrt[3]{-81}+\\sqrt{\\sqrt{9}}=$",
+      "options": [
+        "$7\\sqrt[3]{3}-\\sqrt{3}$",
+        "$2\\sqrt[3]{3}$",
+        "$7\\sqrt[3]{3}+\\sqrt{3}$",
+        "$7\\sqrt[3]{3}+\\sqrt[4]{3}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "∛192=4∛3، ∛(−81)=−3∛3 فيصبح 7∛3، و√√9=√3"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 7,
+      "number": 2,
+      "body": "احسب: $(-27)^{\\frac{2}{3}}\\left(\\frac{16}{25}\\right)^{-\\frac{1}{2}}=$",
+      "options": [
+        "$\\frac{45}{4}$",
+        "$\\frac{-36}{5}$",
+        "$\\frac{-45}{4}$",
+        "$\\frac{36}{5}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "9 × 5/4 = 45/4"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 8,
+      "number": 3,
+      "body": "احسب: $\\frac{3^{-1}+3}{\\frac{25}{9}+3^{-2}}=$",
+      "options": [
+        "$\\frac{13}{15}$",
+        "$\\frac{15}{26}$",
+        "$\\frac{15}{13}$",
+        "$\\frac{26}{15}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "(10/3) ÷ (26/9) = 15/13"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 8,
+      "number": 4,
+      "body": "المقدار $\\frac{6}{2\\sqrt{3}-3}$ في أبسط صورة",
+      "options": [
+        "$4\\sqrt{3}-6$",
+        "$4\\sqrt{3}+3$",
+        "$2\\sqrt{3}+6$",
+        "$4\\sqrt{3}+6$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "بضرب المرافق (2√3+3) والمقام يصبح 3"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 8,
+      "number": 5,
+      "body": "أي مما يلي عبارة صحيحة",
+      "options": [
+        "إذا كان $0<a<b$ فإن $\\frac{1}{a}>\\frac{1}{b}$",
+        "إذا كان $a<b$ فإن $\\frac{1}{a}>\\frac{1}{b}$",
+        "إذا كان $a<b$ فإن $\\frac{1}{a}<\\frac{1}{b}$",
+        "إذا كان $0<a<b$ فإن $\\frac{1}{a}<\\frac{1}{b}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "الانعكاس يصح فقط عندما يكون العددان موجبين"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 9,
+      "number": 6,
+      "body": "احسب: $(\\sqrt{5}+\\sqrt{10})^{2}=$",
+      "options": [
+        "$15$",
+        "$15+10\\sqrt{2}$",
+        "$\\sqrt{15}$",
+        "$15+\\sqrt{50}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "5+10+2√50 = 15+10√2"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 9,
+      "number": 7,
+      "body": "بسّط المقدار: $\\left(\\frac{yz^{2}}{x^{2}}\\right)^{2}\\left(\\frac{z}{xy^{-2}}\\right)^{-2}=$",
+      "options": [
+        "$\\frac{z^{2}}{xy^{2}}$",
+        "$\\left(\\frac{xy}{z}\\right)^{2}$",
+        "$\\left(\\frac{z}{xy}\\right)^{2}$",
+        "$\\frac{z^{3}}{x^{3}y}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "y²z⁴/x⁴ × x²/(y⁴z²) = z²/(x²y²)"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 9,
+      "number": 8,
+      "body": "احسب: $\\frac{3}{\\sqrt[4]{3}}=$",
+      "options": [
+        "$\\sqrt[4]{27}$",
+        "$\\frac{\\sqrt[4]{27}}{3}$",
+        "$\\sqrt[4]{3}$",
+        "$\\frac{\\sqrt[4]{9}}{3}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "3 ÷ 3^(1/4) = 3^(3/4) = ⁴√27"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 10,
+      "number": 9,
+      "body": "أي مما يلي ليس عددا حقيقيا",
+      "options": [
+        "$\\sqrt[3]{-8}$",
+        "$\\sqrt[4]{-3}$",
+        "$\\sqrt[4]{(-3)^{4}}$",
+        "$(\\sqrt[3]{-3})^{4}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "الجذر الزوجي لعدد سالب غير معرف في الأعداد الحقيقية"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 10,
+      "number": 10,
+      "body": "بسّط المقدار: $(2x^{2})^{-3}-2(x^{2})^{-3}=$",
+      "options": [
+        "$\\frac{15}{8}x^{-6}$",
+        "$\\frac{-15}{8}x^{-6}$",
+        "$\\frac{15}{8}x^{6}$",
+        "$\\frac{-15}{8}x^{6}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(1/8 − 2)x⁻⁶ = −15/8 x⁻⁶"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 10,
+      "number": 11,
+      "body": "احسب: $(-125)^{\\frac{2}{3}}\\left(\\frac{25}{4}\\right)^{\\frac{-3}{2}}=$",
+      "options": [
+        "$\\frac{-8}{25}$",
+        "$\\frac{8}{25}$",
+        "$\\frac{8}{5}$",
+        "$-20$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "25 × 8/125 = 8/5"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 11,
+      "number": 12,
+      "body": "بسّط المقدار: $\\frac{\\frac{1}{x+2}-\\frac{1}{x}}{\\frac{1}{x+2}}=$",
+      "options": [
+        "$\\frac{-x}{2}$",
+        "$-\\frac{2}{x}$",
+        "$-x$",
+        "$\\frac{-1}{x}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "البسط −2/(x(x+2)) مضروبا في (x+2) = −2/x"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 11,
+      "number": 14,
+      "body": "اذا كان $9^{x}=y$ فإن $9^{3x+2}=$",
+      "options": [
+        "$2y^{3}$",
+        "$81y^{3}$",
+        "$y^{3}+2$",
+        "$y^{3}+81$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(9^x)³ × 9² = 81y³"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 11,
+      "number": 15,
+      "body": "بسّط المقدار: $\\sqrt{\\frac{1}{x^{2}}+y^{-4}}=$",
+      "options": [
+        "$\\frac{1}{|x|}+\\frac{1}{y^{2}}$",
+        "$\\frac{\\sqrt{x^{2}+y^{4}}}{|x|y^{2}}$",
+        "$\\frac{1}{x}+\\frac{1}{y^{2}}$",
+        "$\\frac{\\sqrt{x^{2}+y^{4}}}{xy^{2}}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "المقام المشترك x²y⁴ ويلزم |x| لأن الجذر موجب"
+    },
+    {
+      "topic": "real-numbers",
+      "section": "تمارين على الأعداد الحقيقية",
+      "page": 12,
+      "number": 16,
+      "body": "اذا كان العدد $a$ هو المعكوس الضربي للعدد $\\frac{2}{3}$ ، و $b$ هو المعكوس الجمعي للعدد $\\frac{\\sqrt{5}}{2}$ فإن $\\frac{1}{a+b}=$",
+      "options": [
+        "$\\frac{3+\\sqrt{5}}{2}$",
+        "$\\frac{1}{2}$",
+        "$\\frac{3-\\sqrt{5}}{2}$",
+        "$\\frac{-1}{2}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "a=3/2 و b=−√5/2 فيكون 2/(3−√5) = (3+√5)/2"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 16,
+      "number": 1,
+      "body": "بسّط المقدار: $\\frac{x^{2}-x-20}{2x}\\div\\frac{x^{2}-25}{x}=$",
+      "options": [
+        "$\\frac{x-4}{2x+10}$",
+        "$\\frac{x+4}{2x-10}$",
+        "$\\frac{x+4}{2x+10}$",
+        "$\\frac{x-4}{2x-10}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "(x−5)(x+4)/2x × x/((x−5)(x+5)) = (x+4)/(2x+10)"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 16,
+      "number": 2,
+      "body": "بسّط المقدار: $\\frac{(2x+3)^{2}-9}{4x}=$",
+      "options": [
+        "$2x+3$",
+        "$x-3$",
+        "$2x-3$",
+        "$x+3$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "(4x²+12x)/4x = x+3"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 16,
+      "number": 3,
+      "body": "بسّط المقدار: $\\frac{1}{x^{2}+x}-\\frac{x}{x+1}=$",
+      "options": [
+        "$\\frac{1-x}{x(x+1)}$",
+        "$\\frac{1-x}{x}$",
+        "$\\frac{1-x}{(x^{2}+x)(x+1)}$",
+        "$\\frac{x-1}{x}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(1−x²)/(x(x+1)) = (1−x)(1+x)/(x(x+1)) = (1−x)/x"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 17,
+      "number": 4,
+      "body": "إذا كان $(1-x^{2})(x+3)=0$ فإن",
+      "options": [
+        "$x\\in\\{3,-1,-3\\}$",
+        "$x\\in\\{2,-1,-3\\}$",
+        "$x\\in\\{1,-1,-3\\}$",
+        "$x\\in\\{1,-1,3\\}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "x=±1 من القوس الأول و x=−3 من الثاني"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 17,
+      "number": 5,
+      "body": "المقدار $2x^{2}+bx+3=0$ يكون مربعا كاملا إذا كان $|b|$ يساوي",
+      "options": [
+        "$\\sqrt{23}$",
+        "$2\\sqrt{6}$",
+        "$2\\sqrt{3}$",
+        "$\\sqrt{25}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "المميز = 0 → b²=4×2×3=24 → |b|=2√6"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 17,
+      "number": 6,
+      "body": "بسّط المقدار: $\\frac{27x^{3}-125}{3x^{2}-5x}=$",
+      "options": [
+        "$\\frac{9x^{2}-15x+25}{x}$",
+        "$\\frac{9x^{2}+30x+25}{x}$",
+        "$\\frac{9x^{2}-30x+25}{x}$",
+        "$\\frac{9x^{2}+15x+25}{x}$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "(3x−5)(9x²+15x+25) ÷ x(3x−5)"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 18,
+      "number": 7,
+      "body": "بسّط المقدار: $\\left(\\frac{2}{x+5}-4\\right)\\left(\\frac{x}{2x+9}\\right)=$",
+      "options": [
+        "$\\frac{-x}{x+5}$",
+        "$\\frac{-2x}{x+5}$",
+        "$\\frac{x}{x+5}$",
+        "$\\frac{2x}{x+5}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(−4x−18)/(x+5) × x/(2x+9) = −2x/(x+5)"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 18,
+      "number": 8,
+      "body": "حلّل المقدار: $2u^{4}-7u^{2}+5=$",
+      "options": [
+        "$(u^{2}-1)(2u^{2}+5)$",
+        "$(u^{2}+1)(2u^{2}-5)$",
+        "$(u^{2}-1)(2u^{2}-5)$",
+        "لا يحلل"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "بالفك: 2u⁴−5u²−2u²+5 ✓"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 18,
+      "number": 9,
+      "body": "حلّل المقدار: $s^{3}-t^{3}=$",
+      "options": [
+        "$(s+t)(s^{2}-st+t^{2})$",
+        "$(s-t)(s^{2}+st+t^{2})$",
+        "$(s-t)^{3}$",
+        "$(s-t)(s^{2}-st+t^{2})$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "متطابقة الفرق بين مكعبين"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 19,
+      "number": 10,
+      "body": "بسّط المقدار: $(x+2)\\div\\left(\\frac{x^{2}-4}{x}\\right)=$",
+      "options": [
+        "$\\frac{-x}{x+2}$",
+        "$\\frac{x}{x-2}$",
+        "$\\frac{x}{x+2}$",
+        "$\\frac{-x}{x-2}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(x+2) × x/((x−2)(x+2)) = x/(x−2)"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 19,
+      "number": 11,
+      "body": "بسّط المقدار: $(v+w)^{2}-(v-w)^{2}=$",
+      "options": [
+        "$v^{2}+w^{2}$",
+        "$4vw$",
+        "$2v^{2}+2w^{2}$",
+        "$v^{2}-w^{2}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "الفرق بين مربعين = 4vw"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 19,
+      "number": 13,
+      "body": "اذا كانت المعادلة $x^{2}+2Ax+3=0$ ليس لها جذور حقيقية فإن",
+      "options": [
+        "$-\\sqrt{3}<A<\\sqrt{3}$",
+        "$A<-\\sqrt{3}$",
+        "$A>\\sqrt{3}$",
+        "$-\\sqrt{3}\\le A\\le\\sqrt{3}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "المميز 4A²−12<0 → A²<3"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 20,
+      "number": 14,
+      "body": "الجذور الحقيقية للمعادلة $x^{4}-8x^{2}-9=0$ هي",
+      "options": [
+        "$\\{\\pm1\\}$",
+        "$\\{\\pm3\\}$",
+        "$\\{\\pm3,\\pm1\\}$",
+        "$\\emptyset$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(x²−9)(x²+1)=0 والعامل الثاني ليس له جذر حقيقي"
+    },
+    {
+      "topic": "polynomials",
+      "section": "تمارين على الحدوديات",
+      "page": 20,
+      "number": 15,
+      "body": "بسّط المقدار: $\\frac{\\frac{2}{x-3}-\\frac{5}{x+3}}{x-7}=$",
+      "options": [
+        "$\\frac{-3}{x^{2}-9}$",
+        "$\\frac{-3}{x+3}$",
+        "$\\frac{3}{x^{2}-9}$",
+        "$\\frac{3}{x+3}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "البسط −3(x−7)/(x²−9) ثم القسمة على (x−7)"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 23,
+      "number": 1,
+      "body": "مجموعة حل المتباينة $\\frac{1+x}{3}+2>\\frac{-x}{4}$",
+      "options": [
+        "$(-\\infty,-4)$",
+        "$(-\\infty,4)$",
+        "$(4,\\infty)$",
+        "$(-4,\\infty)$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "بالضرب في 12: 4+4x+24>−3x → 7x>−28"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 23,
+      "number": 2,
+      "body": "مجموعة حل المتباينة $-3x+2\\le 2x-5$",
+      "options": [
+        "$\\left(-\\infty,\\frac{5}{7}\\right]$",
+        "$\\left[\\frac{-7}{5},\\infty\\right)$",
+        "$\\left[\\frac{7}{5},\\infty\\right)$",
+        "$\\left[\\frac{-5}{7},\\infty\\right)$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "7 ≤ 5x → x ≥ 7/5"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 24,
+      "number": 3,
+      "body": "مجموعة حل المتباينة $x^{2}-x\\le 10+2x$",
+      "options": [
+        "$(-\\infty,5)$",
+        "$[-5,2]$",
+        "$[-2,5]$",
+        "$[-2,\\infty)$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "(x−5)(x+2) ≤ 0"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 24,
+      "number": 4,
+      "body": "مجموعة حل المتباينة $\\frac{1}{|x-2|}>2$ فإن :",
+      "options": [
+        "$(0,4)/\\{2\\}$",
+        "$(0,4)$",
+        "$\\left(\\frac{3}{2},\\frac{5}{2}\\right)$",
+        "$\\left(\\frac{3}{2},\\frac{5}{2}\\right)/\\{2\\}$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "|x−2| < 1/2 مع استبعاد x=2"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 24,
+      "number": 5,
+      "body": "مجموعة حل المتباينة $(2x-1)(2x+3)\\le 4(x-2)$",
+      "options": [
+        "$\\left[\\frac{-1}{4},\\frac{1}{4}\\right]$",
+        "$\\left(-\\infty,\\frac{-1}{4}\\right)$",
+        "$\\emptyset$",
+        "$\\left(-\\infty,\\frac{-1}{4}\\right]$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "4x²−4x+7 ≤ 0 والمميز سالب فلا حل"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 25,
+      "number": 6,
+      "body": "مجموعة حل المتباينة $\\frac{x+1}{1-x}\\ge 0$",
+      "options": [
+        "$[-1,1]$",
+        "$(-1,1)$",
+        "$(-1,1]$",
+        "$[-1,1)$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "الصفر عند −1 مقبول و1 مستبعد لأنه يصفّر المقام"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 25,
+      "number": 7,
+      "body": "مجموعة حل المتباينة $\\frac{5x-2}{x-2}\\le 3$",
+      "options": [
+        "$(-\\infty,-4)$",
+        "$[-2,2)$",
+        "$[-4,2]$",
+        "$(2,\\infty)$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(2x+4)/(x−2) ≤ 0 → −2 ≤ x < 2"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 26,
+      "number": 9,
+      "body": "مجموعة حل المتباينة $\\frac{3x+2}{x-2}\\le 2$",
+      "options": [
+        "$(-\\infty,-6)$",
+        "$[-6,2)$",
+        "$[-2,6]$",
+        "$(6,\\infty)$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(x+6)/(x−2) ≤ 0 → −6 ≤ x < 2"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 26,
+      "number": 10,
+      "body": "مجموعة حل المتباينة $\\frac{2x}{x-1}\\le 3$",
+      "options": [
+        "$(-\\infty,1)\\cup[3,\\infty)$",
+        "$(1,3]$",
+        "$[1,3]$",
+        "$R$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "(3−x)/(x−1) ≥ 0 مقلوبة → x<1 أو x≥3"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 27,
+      "number": 11,
+      "body": "مجموعة حل المتباينة $\\frac{2x+3}{x-2}\\le\\frac{x-3}{x-2}$",
+      "options": [
+        "$(-\\infty,-6]$",
+        "$[-6,2)$",
+        "$[-6,6]$",
+        "$(6,\\infty)$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(x+6)/(x−2) ≤ 0 → −6 ≤ x < 2"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 27,
+      "number": 12,
+      "body": "مجموعة حل المتباينة $2<\\frac{3}{x-1}\\le 4$",
+      "options": [
+        "$\\left[\\frac{7}{4},\\frac{5}{2}\\right)$",
+        "$\\left(1,\\frac{7}{4}\\right]$",
+        "$\\left(\\frac{7}{4},\\frac{5}{2}\\right]$",
+        "$\\left(1,\\frac{5}{2}\\right)$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "x−1 موجب و 3/4 ≤ x−1 < 3/2"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 28,
+      "number": 13,
+      "body": "مجموعة حل المتباينة $\\frac{3}{5}\\le\\frac{2-3x}{2}\\le 1$",
+      "options": [
+        "$\\left[\\frac{-4}{15},0\\right]$",
+        "$\\left[0,\\frac{-12}{5}\\right]$",
+        "$\\left[0,\\frac{4}{15}\\right]$",
+        "$\\left[\\frac{4}{3},\\frac{16}{15}\\right]$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "6/5 ≤ 2−3x ≤ 2 → 0 ≤ x ≤ 4/15"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 28,
+      "number": 14,
+      "body": "إن مجموعة حل المتباينة $\\left|\\frac{x}{3}\\right|>\\frac{1}{2}$ هي :",
+      "options": [
+        "$\\left(\\frac{3}{2},\\infty\\right)$",
+        "$(-6,6)$",
+        "$(-\\infty,-6)\\cup(6,\\infty)$",
+        "ليس أياً مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "|x|>3/2 فالحل (−∞,−3/2)∪(3/2,∞) وهو غير مذكور"
+    },
+    {
+      "topic": "inequalities",
+      "section": "تمارين على المتباينات",
+      "page": 29,
+      "number": 15,
+      "body": "إذا كان $\\frac{x-2}{x+1}>2$ فإن :",
+      "options": [
+        "$-4<x<-1$",
+        "$x>2$",
+        "$1<x<4$",
+        "$-1<x<0$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "(x+4)/(x+1) < 0 → −4 < x < −1"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 33,
+      "number": 1,
+      "body": "مجموعة حل المتباينة $|5x+1|>-2$ هي",
+      "options": [
+        "$\\left(\\frac{-3}{2},\\infty\\right)$",
+        "$\\left(\\frac{-3}{5},\\frac{1}{5}\\right)$",
+        "$\\left(-\\infty,\\frac{1}{5}\\right)$",
+        "$(-\\infty,\\infty)$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "القيمة المطلقة ≥ 0 وهي دائما أكبر من −2"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 33,
+      "number": 2,
+      "body": "مجموعة حل المتباينة $|3x-5|<7$ هي",
+      "options": [
+        "$\\left(-\\infty,\\frac{-2}{3}\\right)\\cup(4,\\infty)$",
+        "$(-1,4)$",
+        "$\\left(-\\infty,\\frac{-2}{3}\\right)$",
+        "$\\left(\\frac{-2}{3},4\\right)$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "−7 < 3x−5 < 7 → −2/3 < x < 4"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 34,
+      "number": 3,
+      "body": "مجموعة حل المتباينة $|2x-1|-|x-5|<0$ هي",
+      "options": [
+        "$(-2,4)$",
+        "$R-[-2,4]$",
+        "$R-(-2,4)$",
+        "$(-4,2)$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "بالتربيع 3x²+6x−24<0 → (x+4)(x−2)<0"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 34,
+      "number": 4,
+      "body": "مجموعة حل المتباينة $\\sqrt{(2x+1)^{2}}>3$ هي",
+      "options": [
+        "$(-\\infty,-2)\\cup(1,\\infty)$",
+        "$(-\\infty,1)$",
+        "$(-2,1)$",
+        "$(-\\infty,\\infty)$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "الجذر يعطي |2x+1|>3"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 35,
+      "number": 5,
+      "body": "مجموعة حل المتباينة $\\left|\\frac{1}{x-1}\\right|>\\frac{5}{2}$ هي",
+      "options": [
+        "$\\left(\\frac{3}{5},\\frac{7}{5}\\right)$",
+        "$\\left(\\frac{3}{5},\\frac{7}{5}\\right)-\\{1\\}$",
+        "$R-\\left[\\frac{3}{5},\\frac{7}{5}\\right]$",
+        "$\\left[\\frac{3}{5},\\frac{7}{5}\\right]-\\{1\\}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "|x−1| < 2/5 مع استبعاد x=1"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 35,
+      "number": 6,
+      "body": "مجموعة حل المتباينة $|x|\\ge|x-1|$ هي",
+      "options": [
+        "$\\left(-\\frac{1}{2},\\infty\\right)$",
+        "$\\left[\\frac{-1}{2},\\infty\\right)$",
+        "$\\left[\\frac{1}{2},\\infty\\right)$",
+        "$\\left(-\\infty,\\frac{1}{2}\\right]$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "بالتربيع 2x ≥ 1"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 36,
+      "number": 7,
+      "body": "مجموعة حل المتباينة $|x+3|<|x-8|$ هي",
+      "options": [
+        "$\\left[0,\\frac{5}{2}\\right]$",
+        "$\\left(-\\infty,\\frac{5}{2}\\right]$",
+        "$R-\\left(0,\\frac{5}{2}\\right)$",
+        "$\\left(-\\infty,\\frac{5}{2}\\right)$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "بالتربيع 22x < 55"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 36,
+      "number": 8,
+      "body": "مجموعة حل المتباينة $\\frac{1}{|x-1|}>0.5$ هي",
+      "options": [
+        "$(-1,3)$",
+        "$(-\\infty,-1)$",
+        "$(-1,1)\\cup(1,3)$",
+        "$(3,\\infty)$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "|x−1| < 2 مع استبعاد x=1"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 37,
+      "number": 9,
+      "body": "مجموعة حل المعادلة $|2x+1|=1$ هي",
+      "options": [
+        "$\\{0\\}$",
+        "$\\{-1\\}$",
+        "$\\{-1,1\\}$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "الحل {0,−1} وهو غير مذكور"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 37,
+      "number": 10,
+      "body": "مجموعة حل المعادلة $|2-\\sqrt{x}|=1$ هي",
+      "options": [
+        "$\\{9,1\\}$",
+        "$\\{10\\}$",
+        "$\\{12\\}$",
+        "$\\{3,1\\}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "√x = 1 أو 3 → x = 1 أو 9"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 37,
+      "number": 11,
+      "body": "مجموعة حل المعادلة $|x|+x=|2x|$ هي",
+      "options": [
+        "$R$",
+        "$\\{9,1\\}$",
+        "$[0,\\infty)$",
+        "$\\{1\\}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "تختصر إلى x = |x| أي x ≥ 0"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 38,
+      "number": 12,
+      "body": "اذا كان $1<x<2$ فإن $|x-1|-|x-2|$ يساوي",
+      "options": [
+        "$2x-3$",
+        "$1$",
+        "$2x+3$",
+        "$-1$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "(x−1) − (2−x) = 2x−3"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 38,
+      "number": 13,
+      "body": "اذا كان $x^{2}+2x-3=0$ و $x<|x|$ فإن $2x+4$ يساوي",
+      "options": [
+        "$-2$",
+        "$6$",
+        "$2$",
+        "$8$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "الشرط يعني x سالب فيكون x=−3 والناتج −2"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 39,
+      "number": 14,
+      "body": "أيا مما يلي يمثل عبارة صحيحة :",
+      "options": [
+        "$|x+y|=|x|+|y|$",
+        "$|x+y|\\le|x|+|y|$",
+        "$|x+y|<|x|+|y|$",
+        "$|x+y|\\ge|x|+|y|$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "متباينة المثلث"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 39,
+      "number": 15,
+      "body": "$\\sqrt{4x^{2}+x^{2}y^{2}}$ يساوي",
+      "options": [
+        "$2x+2y$",
+        "$|x|\\sqrt{4+y^{2}}$",
+        "$|x|(4+y^{2})$",
+        "$x\\sqrt{4+y^{2}}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "√(x²(4+y²)) = |x|√(4+y²)"
+    },
+    {
+      "topic": "absolute-value",
+      "section": "تمارين على القيمة المطلقة",
+      "page": 40,
+      "number": 16,
+      "body": "$\\frac{x}{\\sqrt{x^{3}+x^{2}}}$ يساوي",
+      "options": [
+        "$\\frac{1}{\\sqrt{x+1}}$",
+        "$\\frac{x}{|x|(\\sqrt{x}+1)}$",
+        "$\\frac{1}{\\sqrt{x}+1}$",
+        "$\\frac{x}{|x|\\sqrt{x+1}}$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "√(x²(x+1)) = |x|√(x+1)"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 45,
+      "number": 1,
+      "body": "مجال الدالة $f(x)=\\sqrt{4-x^{2}}$ هو",
+      "options": [
+        "$[-2,2]$",
+        "$[2,\\infty)\\cup(-\\infty,-2]$",
+        "$[-2,\\infty)$",
+        "$(-\\infty,\\infty)$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "4−x² ≥ 0 → −2 ≤ x ≤ 2"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 45,
+      "number": 2,
+      "body": "مجال الدالة $g(x)=\\frac{\\sqrt{-x}}{x+3}$ هو",
+      "options": [
+        "$(-\\infty,0]/\\{-3\\}$",
+        "$(-\\infty,0)/\\{-3\\}$",
+        "$(-\\infty,-3]$",
+        "$(-\\infty,-3)$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "−x ≥ 0 أي x ≤ 0 مع استبعاد صفر المقام −3"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 46,
+      "number": 3,
+      "body": "مجال الدالة $h(x)=\\frac{\\sqrt{x+1}}{x+1}+x^{2}$ هو",
+      "options": [
+        "$[-1,\\infty)$",
+        "$(-1,\\infty)$",
+        "$(-\\infty,-1]$",
+        "$(-\\infty,-1)$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "x+1 ≥ 0 مع x+1 ≠ 0 → x > −1"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 46,
+      "number": 4,
+      "body": "مجال الدالة $f(x)=\\begin{cases}\\sqrt{x+4} & x>-4\\\\|3-2x| & x<-4\\end{cases}$ هو",
+      "options": [
+        "$(-\\infty,-4)$",
+        "$(-4,\\infty)$",
+        "$R$",
+        "$R/\\{-4\\}$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "اتحاد الفرعين يغطي كل الأعداد عدا −4"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 47,
+      "number": 5,
+      "body": "إذا كان مجال الدالة $f(x)=\\begin{cases}4x+4 & x<1\\\\(4x+3)^{\\frac{1}{3}} & x\\ge 1\\end{cases}$ فإن $f(6)+f(-1)$ تساوي",
+      "options": [
+        "$3$",
+        "$5$",
+        "$9$",
+        "$11$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "f(6)=∛27=3 و f(−1)=0"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 47,
+      "number": 6,
+      "body": "لتكن $g(x)=4+3x$ فإن $g(2y-1)=$",
+      "options": [
+        "$6y-1$",
+        "$6y+7$",
+        "$6y+1$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "4+3(2y−1) = 6y+1"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 48,
+      "number": 7,
+      "body": "إذا كان $g(x)=2x$ فإن $\\frac{g(x)+g(y)}{x+y}=$",
+      "options": [
+        "$2$",
+        "$x+y$",
+        "$x-y$",
+        "$2x+2y$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "(2x+2y)/(x+y) = 2"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 48,
+      "number": 8,
+      "body": "إذا كان $x^{4}-5x^{3}-2x^{2}+24x=g(x)(x+2)$ فإن $g(x)$",
+      "options": [
+        "$x^{3}+7x^{2}-12x$",
+        "$x^{2}-3x-18$",
+        "$x^{3}-7x^{2}+12x$",
+        "$x^{3}+10x^{2}+6x$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "بالقسمة على (x+2) ينتج x(x²−7x+12)"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 48,
+      "number": 9,
+      "body": "إذا كان $y=\\frac{ax+b}{a+b}$ فإن $a=$",
+      "options": [
+        "$\\frac{b(y-1)}{y-x}$",
+        "$\\frac{b(1-y)}{y-x}$",
+        "$\\frac{b(y+1)}{y-x}$",
+        "$\\frac{b(y-1)}{y+x}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "a(y−x) = b(1−y)"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 49,
+      "number": 10,
+      "body": "إذا كان $f(x)=2-5x$ و $g(x)=x^{2}+x$ فإن $g(f(0))=$",
+      "options": [
+        "$-3$",
+        "$6$",
+        "$2$",
+        "$8$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "f(0)=2 ثم g(2)=6"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 49,
+      "number": 11,
+      "body": "إذا كان $f(x)=x^{2}$ و $g(x)=\\sqrt{x^{2}+3}$ فإن $(g\\circ f)(x)=$",
+      "options": [
+        "$(x+3)^{2}$",
+        "$x^{2}+3$",
+        "$\\sqrt{x^{4}+3}$",
+        "$\\sqrt{x^{2}+3}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "g(x²) = √((x²)²+3)"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 49,
+      "number": 12,
+      "body": "إذا كانت $f(x)=|x+2|$ و $g(x)=1+\\sqrt{x}$ فإن $(f\\circ g)(x)=$",
+      "options": [
+        "$\\sqrt{x+3}$",
+        "$|x+2|(1+\\sqrt{x})$",
+        "$\\sqrt{|x|+3}$",
+        "$|\\sqrt{x}+3|$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "f(1+√x) = |1+√x+2|"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 50,
+      "number": 13,
+      "body": "إذا كان $f(x)=2x^{2}+x+k$ وكان $f(1)=2$ فإن $K=$",
+      "options": [
+        "$-5$",
+        "$1$",
+        "$5$",
+        "$-1$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "3+k = 2 → k = −1"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 50,
+      "number": 14,
+      "body": "إذا كان $f(x)=\\frac{x}{5}-\\frac{3}{x^{2}}$ فإن $f(2)=$",
+      "options": [
+        "$-1$",
+        "$\\frac{7}{20}$",
+        "$\\frac{-7}{20}$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "2/5 − 3/4 = −7/20"
+    },
+    {
+      "topic": "real-functions",
+      "section": "تمارين على الدوال الحقيقية",
+      "page": 50,
+      "number": 15,
+      "body": "مجال الدالة $y=\\frac{\\sqrt{x^{2}-9}}{\\sqrt{x-3}}$ هو",
+      "options": [
+        "$[-3,3)$",
+        "$R/\\{3\\}$",
+        "$(3,\\infty)$",
+        "$[3,\\infty)$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "المقام يفرض x>3 بشكل قاطع"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 55,
+      "number": 1,
+      "body": "جرى تخفيض الأسعار خلال التنزيلات بنسبة $20\\%$ إذا كان ثمن سلعة $100$ د.ك خلال التنزيلات فإن ثمنها قبل التنزيلات كان:",
+      "options": [
+        "$120\\ k.d$",
+        "$124\\ k.d$",
+        "$125\\ k.d$",
+        "ليس أياً مما سبق"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "100 ÷ 0.8 = 125"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 55,
+      "number": 2,
+      "body": "ارتفع سعر الذهب في أحد السنوات بنسبة $20\\%$ فإذا كان سعر سبيكة تزن $100g$ هو $1800\\ KD$ ، فإن سعرها بعد الزيادة هو:",
+      "options": [
+        "$2160\\ KD$",
+        "$1440\\ KD$",
+        "$21600\\ KD$",
+        "ليس أياً مما سبق"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "1800 × 1.2 = 2160"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 56,
+      "number": 1,
+      "body": "يستطيع محمد إنهاء عمل ما في $3$ ساعات بينما يحتاج منصور إلى $9$ ساعات لإنهاء نفس العمل. كم من الوقت نحتاج لإنهاء هذا العمل إذا عمل أحمد ومنصور معاً ؟",
+      "options": [
+        "$12\\ hours$",
+        "$6\\ hours$",
+        "$2\\ hours$",
+        "ليس أياً مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "xy/(x+y) = 27/12 = 2.25 ساعة وهي غير مذكورة"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 56,
+      "number": 2,
+      "body": "إذا كانت حنفية في أعلى خزان تستطيع أن تملأه في $4$ ساعات وحنفية أخرى في أسفله تستطيع أن تفرغه خلال $6$ ساعات. فإن عدد الساعات اللازمة لملئ الخزان إذا فتحنا الحنفيتين معاً هو:",
+      "options": [
+        "10 ساعات",
+        "6 ساعات",
+        "18 ساعة",
+        "12 ساعة"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "xy/|x−y| = 24/2 = 12"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 58,
+      "number": 1,
+      "body": "إذا كان سرعة سيارة $54\\ km/h$ فإن سرعتها $m/sec$ هي",
+      "options": [
+        "$1.5$",
+        "$15$",
+        "$90$",
+        "$900$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "54 × 1000 ÷ 3600 = 15"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 58,
+      "number": 2,
+      "body": "إذا قطعت باخرة $480\\ km$ خلال $4$ ساعات ، فإن سرعة الباخرة مقدرة بـ $m/min$ هي",
+      "options": [
+        "$2000$",
+        "$4000$",
+        "$200$",
+        "$7200$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "120 km/h = 120000 ÷ 60 = 2000"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 58,
+      "number": 3,
+      "body": "كمية من الماء تكفي $7$ مسافرين لمدة $10$ أيام ، إذا استخدم الماء خمسة فقط من المسافرين بنفس المعدل فإن عدد الأيام التي ستكفيهم هو",
+      "options": [
+        "$7$",
+        "$4$",
+        "$14$",
+        "$5$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "70 ÷ 5 = 14"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 59,
+      "number": 4,
+      "body": "مثلث متطابق الأضلاع ، طول كل ضلع من أضلاعه $6\\ cm$ ، فإن مساحة المنطقة المثلثة هي",
+      "options": [
+        "$18\\ cm^{2}$",
+        "$9\\ cm^{2}$",
+        "$18\\sqrt{3}\\ cm^{2}$",
+        "$9\\sqrt{3}\\ cm^{2}$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "(√3/4)×36 = 9√3"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 59,
+      "number": 5,
+      "body": "$28$ رجلا يتمون عملا في $30$ يوم . فكم يوما يلزم $35$ رجلا لإتمام نفس العمل ؟",
+      "options": [
+        "$24$",
+        "$15$",
+        "$20$",
+        "$40$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "840 يوم-رجل ÷ 35 = 24"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 59,
+      "number": 6,
+      "body": "ليكن $A$ مربعا و $B$ مثلثا متطابق الأضلاع بحيث $A$ و $B$ لهما المحيط نفسه. فإذا كان طول ضلع $A$ أقل من طول ضلع $B$ بمقدار $4cm$ فإن طول ضلع $B$ يساوي",
+      "options": [
+        "$20cm$",
+        "$18cm$",
+        "$16cm$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "4(b−4) = 3b → b = 16"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 60,
+      "number": 7,
+      "body": "مساحة سطح مكعب هي $24cm^{2}$ ، فإن حجم نفس المكعب هو",
+      "options": [
+        "$8cm^{3}$",
+        "$4cm^{3}$",
+        "$16cm^{3}$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "6s²=24 → s=2 → الحجم 8"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 60,
+      "number": 8,
+      "body": "اشترى تاجر بضاعة بمبلغ $1000$ دينار وباعها بمبلغ $1200$ دينار ، فإن النسبة المئوية للربح هي",
+      "options": [
+        "$2\\%$",
+        "$20\\%$",
+        "$10\\%$",
+        "$120\\%$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "200 ÷ 1000 = 20%"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 60,
+      "number": 9,
+      "body": "اشترى ناصر بضاعة بمبلغ $17$ دينار أثناء التنزيلات ، فإذا كانت نسبة التنزيلات $15\\%$ فإن ثمن البضاعة قبل التنزيلات هي",
+      "options": [
+        "$19KD$",
+        "$21KD$",
+        "$20KD$",
+        "$22KD$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "17 ÷ 0.85 = 20"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 61,
+      "number": 10,
+      "body": "بلغ عدد الطلاب في إحدى الكليات $1170$ طالب العام الماضي وفي هذا العام زاد عدد الطلاب بنسبة $20\\%$ فإن عدد الطلاب في تلك الكلية لهذا العام يساوي",
+      "options": [
+        "$1287$",
+        "$1404$",
+        "$1500$",
+        "$1420$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "1170 × 1.2 = 1404"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 61,
+      "number": 11,
+      "body": "إذا ارتفع سعر بضاعة ما من $500$ فلس الى $650$ فلس فإن النسبة المئوية للزيادة في السعر يساوي",
+      "options": [
+        "$15\\%$",
+        "$25\\%$",
+        "$20\\%$",
+        "$30\\%$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "150 ÷ 500 = 30%"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 61,
+      "number": 12,
+      "body": "مصنع عصير يحفظ العصير في خزانات سعة كل منها $1.5\\ m^{3}$ يتم توزيع العصير بعد ذلك في علب سعة كل علبة $300\\ cm^{3}$ إذا كان سعر العلبة الواحدة $100$ فلس فإن سعر العصير في الخزان الواحد هو",
+      "options": [
+        "$250KD$",
+        "$750KD$",
+        "$500KD$",
+        "$1000KD$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "1500000 ÷ 300 = 5000 علبة × 100 فلس = 500 د.ك"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 62,
+      "number": 13,
+      "body": "إذا كان محيط دائرة يساوي $L$ فإن مساحتها تساوي",
+      "options": [
+        "$4\\pi L^{2}$",
+        "$\\frac{L}{4\\pi}$",
+        "$\\frac{L^{2}}{4\\pi}$",
+        "$8\\pi L^{3}$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "r = L/2π ثم πr² = L²/4π"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 62,
+      "number": 14,
+      "body": "حوض سباحة طوله $64m$ ، عرضه $3m$ ، عمقه $2m$ ، يراد ملئ الحوض بالماء باستخدام سيارات نقل المياه ، فإذا كانت سعة خزان كل سيارة $8m^{3}$ من الماء فإن عدد السيارات اللازمة لملئ الحوض هو",
+      "options": [
+        "$14$",
+        "$48$",
+        "$12$",
+        "$40$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "384 ÷ 8 = 48"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 63,
+      "number": 16,
+      "body": "أجاب طارق عن $60\\%$ من أسئلة الاختبار اجابات صحيحة ، وأخطأ في العشرة أسئلة الباقية ، فإن عدد أسئلة الاختبار هو",
+      "options": [
+        "$15$",
+        "$20$",
+        "$25$",
+        "$30$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "العشرة تمثل 40% → المجموع 25"
+    },
+    {
+      "topic": "life-applications",
+      "section": "تمارين على تطبيقات حياتية",
+      "page": 63,
+      "number": 17,
+      "body": "اذا كان $20\\%$ من ثمن سلعة ما هو $10KD$ فإن ثمن السلعة هو",
+      "options": [
+        "$100KD$",
+        "$50KD$",
+        "$60KD$",
+        "$80KD$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "10 ÷ 0.2 = 50"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 65,
+      "number": 1,
+      "body": "يزيد طول مستطيل $2m$ عن عرضه ، فإذا كانت مساحة المستطيل $24m^{2}$ فإن طول المستطيل هو",
+      "options": [
+        "$12m$",
+        "$4m$",
+        "$8m$",
+        "$6m$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "w(w+2)=24 → w=4 والطول 6"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 65,
+      "number": 2,
+      "body": "لدى سالم $x$ دينار ولدى خالد $4$ دنانير أقل من سالم ، ولدى يوسف ضعف ما لدى خالد ، فإن ما لدى يوسف يساوي",
+      "options": [
+        "$2x$",
+        "$2(x+4)$",
+        "$2(x-4)$",
+        "$x-4$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "خالد x−4 ويوسف ضعفها"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 66,
+      "number": 3,
+      "body": "إذا كان $x=\\frac{a+bc}{2c+1}$ فإن $c=$",
+      "options": [
+        "$\\frac{a-x}{2x-b}$",
+        "$\\frac{a+x}{2x-b}$",
+        "$\\frac{a-x}{b-2x}$",
+        "$\\frac{a-x}{2x+b}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "c(2x−b) = a−x"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 66,
+      "number": 4,
+      "body": "إذا كان ناتج جمع $4$ أعداد صحيحة متتالية تساوي $y$ فإن أصغر هذه الأعداد معبرة عنه بدلالة $y$ هو",
+      "options": [
+        "$\\frac{y-4}{6}$",
+        "$\\frac{y-6}{4}$",
+        "$\\frac{y+4}{6}$",
+        "$\\frac{y+6}{4}$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "4n+6 = y → n = (y−6)/4"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 67,
+      "number": 5,
+      "body": "خزان مكعب الشكل طول ضلعه $L$ وحجمه يساوي حجم برميل أسطواني ، إذا كان طول نصف قطر قاعدة البرميل يساوي ارتفاعه $h$ فإن $L=$",
+      "options": [
+        "$\\sqrt[3]{\\pi}\\ h$",
+        "$\\frac{h}{\\sqrt[3]{\\pi}}$",
+        "$\\frac{\\pi}{h^{3}}$",
+        "$\\frac{\\pi^{3}}{h}$"
+      ],
+      "answerIndex": 0,
+      "verified": false,
+      "work": "L³ = πh³ → L = h∛π"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 67,
+      "number": 6,
+      "body": "مثلث قائم الزاوية محيطه $12$ وحدة طول إذا كانت أطوال أضلاعه $x$ ، $x+1$ ، $x+2$ فإن مساحة المثلث بالوحدات المربعة تساوي",
+      "options": [
+        "$3$",
+        "$6$",
+        "$27$",
+        "$54$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "x=3 فالأضلاع 3و4و5 والمساحة 6"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 68,
+      "number": 7,
+      "body": "إذا كانت المساحة الكلية لأوجه المكعب تساوي $6x^{2}-36x+54$ فإن المقدار الذي يعطي حجم المكعب هو",
+      "options": [
+        "$x^{2}-27$",
+        "$x^{3}-9x^{2}+27x-27$",
+        "$6x^{3}-36x^{2}-54$",
+        "$x^{3}-6x^{2}-9x$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "s²=(x−3)² فالحجم (x−3)³"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 68,
+      "number": 8,
+      "body": "مع خالد وسالم $40\\ KD$ ، ومع خالد وأيوب $38\\ KD$ ، ومع سالم وأيوب $42\\ KD$ فإن مجموع مبلغ خالد وسالم وأيوب بالدينار يساوي",
+      "options": [
+        "$20\\ KD$",
+        "$30\\ KD$",
+        "$60\\ KD$",
+        "$120\\ KD$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "مجموع المعادلات 120 = ضعف المجموع"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 69,
+      "number": 9,
+      "body": "إذا كان $x$ عددا صحيحا زوجيا موجبا فأي العبارات التالية خاطئة ؟",
+      "options": [
+        "$(4x+5)(2x+7)$ يكون عدد فردي",
+        "$(8x+3)(3x+3)$ يكون عدد فردي",
+        "$(12x+3)(6x+1)$ يكون عدد فردي",
+        "$(5x+11)(3x+4)$ يكون عدد فردي"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "3x+4 زوجي فالحاصل زوجي وليس فرديا"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 69,
+      "number": 10,
+      "body": "إذا كان $x,y,z$ ثلاثة أعداد صحيحة متتالية بحيث يكون $x<y<z$ فإن العبارة الصحيحة فيما يلي هي : (i) $z-y=1$ ، (ii) $\\frac{xyz}{3}$ عدد صحيح ، (iii) $x+y+z$ عدد زوجي",
+      "options": [
+        "(i) فقط",
+        "(ii) فقط",
+        "(i),(ii) فقط",
+        "(ii),(iii) فقط"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "المجموع 3y وقد يكون فرديا فتسقط (iii)"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 70,
+      "number": 11,
+      "body": "إذا كان المتوسط الحسابي لستة أعداد يساوي $24$ وكان مجموع أربعة من هذه الأعداد يساوي $106$ فإن المتوسط الحسابي للعددين يساوي",
+      "options": [
+        "$12$",
+        "$19$",
+        "$48$",
+        "$72$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "(144−106) ÷ 2 = 19"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 70,
+      "number": 12,
+      "body": "مجموعتان من الفرق تضم كل منها $90$ شخصا فإن $\\frac{2}{3}$ المجموعة الأولى يزيد عن $\\frac{1}{5}$ المجموعة الثانية بـ .....",
+      "options": [
+        "$78$",
+        "$42$",
+        "$60$",
+        "$18$"
+      ],
+      "answerIndex": 1,
+      "verified": false,
+      "work": "60 − 18 = 42"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 71,
+      "number": 13,
+      "body": "يكلف ركوب التاكسي بعد الساعة الثانية مساء $2.5\\ KD$ زائد $0.3\\ KD$ لكل $\\frac{1}{5}\\ km$ من الرحلة ، إذا ركب أحدهم مسافة $(n)\\ km$ فإن تكلفة الرحلة تساوي",
+      "options": [
+        "$0.3n+2.5$",
+        "$\\frac{0.3}{5}n+2.5$",
+        "$1.5n+2.5$",
+        "$30n+2.5$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "كل كيلومتر يحوي 5 أخماس → 0.3×5n"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 71,
+      "number": 14,
+      "body": "يحتاج علي وخالد $4$ ساعات لإنجاز عمل ما . إذا كان باستطاعة على أن ينجز العمل لوحده $6$ ساعات ، فكم ساعة يحتاج خالد لإنجاز العمل لوحده ؟",
+      "options": [
+        "$24\\ h$",
+        "$\\frac{1}{12}\\ h$",
+        "$\\frac{1}{24}\\ h$",
+        "$12\\ h$"
+      ],
+      "answerIndex": 3,
+      "verified": false,
+      "work": "1/4 − 1/6 = 1/12"
+    },
+    {
+      "topic": "strategies",
+      "section": "تمارين على الاستراتيجيات والنمذجة",
+      "page": 72,
+      "number": 15,
+      "body": "محيط مربع يساوي ضعف محيط مثلث متطابق الأضلاع ، إذا كان طول أحد أضلاع المربع $75\\ cm$ فإن طول أحد أضلاع المثلث هو",
+      "options": [
+        "$300\\ cm$",
+        "$100\\ cm$",
+        "$50\\ cm$",
+        "$93\\ cm$"
+      ],
+      "answerIndex": 2,
+      "verified": false,
+      "work": "محيط المربع 300 فمحيط المثلث 150 والضلع 50"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 73,
+      "number": 1,
+      "body": "مجموعة حل المعادلة $6x^{2}+x-2=0$ هو",
+      "options": [
+        "$\\left\\{\\frac{1}{2},\\frac{-2}{3}\\right\\}$",
+        "$\\left\\{\\frac{-1}{2},\\frac{2}{3}\\right\\}$",
+        "$\\{-2,6\\}$",
+        "$\\{2,-6\\}$"
+      ],
+      "answerIndex": 0,
+      "verified": true,
+      "work": "(3x+2)(2x−1)=0"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 73,
+      "number": 2,
+      "body": "بسّط المقدار: $\\frac{(a^{2}b^{3})^{5}}{a^{8}b^{9}+a^{9}b^{8}}=$",
+      "options": [
+        "$\\frac{a^{7}b^{8}}{a+b}$",
+        "$\\frac{1}{a(a+b)}$",
+        "$\\frac{a^{2}b^{7}}{a+b}$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 2,
+      "verified": true,
+      "work": "a¹⁰b¹⁵ ÷ a⁸b⁸(a+b)"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 73,
+      "number": 3,
+      "body": "بسّط المقدار: $3^{x}+3^{x}+3^{x}=$",
+      "options": [
+        "$9^{3x}$",
+        "$3^{x+1}$",
+        "$9^{x}$",
+        "$3^{3x}$"
+      ],
+      "answerIndex": 1,
+      "verified": true,
+      "work": "3 × 3ˣ = 3^(x+1)"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 73,
+      "number": 4,
+      "body": "احسب: $-2(|-2|-|3|)=$",
+      "options": [
+        "$2$",
+        "$-2$",
+        "$10$",
+        "$-10$"
+      ],
+      "answerIndex": 0,
+      "verified": true,
+      "work": "−2(2−3) = 2"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 73,
+      "number": 5,
+      "body": "أوجد ناتج النشر: $(x+y)^{3}=$",
+      "options": [
+        "$x^{3}+3xy+y^{3}$",
+        "$x^{3}+2xy+y^{3}$",
+        "$x^{3}+y^{3}$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": true,
+      "work": "الصحيح x³+3x²y+3xy²+y³ وهو غير مذكور"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 74,
+      "number": 6,
+      "body": "بسّط المقدار: $(x+y)^{2}-(x-y)^{2}=$",
+      "options": [
+        "$4y^{2}$",
+        "$4x^{2}y^{2}$",
+        "$4xy$",
+        "$zero$"
+      ],
+      "answerIndex": 2,
+      "verified": true,
+      "work": "الفرق بين مربعين"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 74,
+      "number": 7,
+      "body": "مجموعة حل المعادلة $2x=|x|+x$ هو :",
+      "options": [
+        "$(0,\\infty)$",
+        "$[0,\\infty)$",
+        "$R$",
+        "$\\{1\\}$"
+      ],
+      "answerIndex": 1,
+      "verified": true,
+      "work": "تختصر إلى x = |x| أي x ≥ 0"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 74,
+      "number": 8,
+      "body": "إذا كان $f(x)=|x|-x$ أوجد $f(-5)$",
+      "options": [
+        "$-5$",
+        "$-10$",
+        "$zero$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": true,
+      "work": "f(−5)=5+5=10 وهو غير مذكور"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 74,
+      "number": 9,
+      "body": "مجموعة حل للمتباينة $\\frac{1}{x}<\\frac{1}{2}$ هو :",
+      "options": [
+        "$(0,\\infty)$",
+        "$(-\\infty,0)\\cup(2,\\infty)$",
+        "$(2,\\infty)$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 1,
+      "verified": true,
+      "work": "x سالب يحقق دائما، و x موجب يلزمه x>2"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 74,
+      "number": 10,
+      "body": "مجال الدالة $f(x)=\\sqrt{x+1}$ هو",
+      "options": [
+        "$[1,\\infty)$",
+        "$[0,\\infty)$",
+        "$R\\backslash\\{-1\\}$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": true,
+      "work": "المجال [−1,∞) وهو غير مذكور"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 75,
+      "number": 11,
+      "body": "إذا كان $f(x)=x^{2}-x$ أوجد $f(x-1)$",
+      "options": [
+        "$x^{2}-3x$",
+        "$x^{2}-x-1$",
+        "$x^{2}-3x+2$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 2,
+      "verified": true,
+      "work": "(x−1)²−(x−1) = x²−3x+2"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 75,
+      "number": 12,
+      "body": "أوجد مجموعة حل المتباينة $x>\\frac{1}{x}$",
+      "options": [
+        "$(-1,0)\\cup(1,\\infty)$",
+        "$(0,\\infty)$",
+        "$(1,\\infty)$",
+        "$R$"
+      ],
+      "answerIndex": 0,
+      "verified": true,
+      "work": "(x−1)(x+1)/x > 0"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 75,
+      "number": 13,
+      "body": "نريد أن نرصف طريقين مستقيمين متقاطعين بشكل متعامد طول كل منهما 200 متر وعرض كل منهما 10 متر . ما هي المساحة التي سترصف",
+      "options": [
+        "$3900\\ m^{2}$",
+        "$3800\\ m^{2}$",
+        "$4000\\ m^{2}$",
+        "$2000\\ m^{2}$"
+      ],
+      "answerIndex": 0,
+      "verified": true,
+      "work": "2000 + 2000 − 100 للتقاطع المحسوب مرتين"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 75,
+      "number": 14,
+      "body": "يحصل أحمد على $x$ دينار في اليوم. كم يوم سيحتاج لتحصيل $y$ دينار ؟",
+      "options": [
+        "$\\frac{x}{y}$",
+        "$\\frac{y}{x}$",
+        "$xy$",
+        "$\\frac{100x}{y}$"
+      ],
+      "answerIndex": 1,
+      "verified": true,
+      "work": "المجموع ÷ المعدل اليومي"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 75,
+      "number": 15,
+      "body": "خلطنا $6\\ kg$ من المكسرات نسبة اللوز فيها $20\\%$ مع $4\\ kg$ من المكسرات نسبة اللوز فيها $10\\%$ ما هي نسبة اللوز في الخليط ؟",
+      "options": [
+        "$15\\%$",
+        "$16\\%$",
+        "$30\\%$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 1,
+      "verified": true,
+      "work": "(1.2+0.4) ÷ 10 = 16%"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 76,
+      "number": 16,
+      "body": "يستطيع $x$ عامل إنهاء عمل ما خلال $y$ يوم . كم يوم يحتاج $z$ عامل لإنهاء نفس العمل ؟",
+      "options": [
+        "$\\frac{xz}{y}$",
+        "$\\frac{yz}{x}$",
+        "$\\frac{xy}{z}$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 2,
+      "verified": true,
+      "work": "إجمالي أيام العمل xy مقسوما على z عامل"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 76,
+      "number": 17,
+      "body": "إذا كانت المسافة بين مدينة $A$ ومدينة $B$ هي $30km$ وكانت المسافة بين مدينة $B$ ومدينة $C$ هي $20km$ فإن المسافة بين المدينة $A$ والمدينة $C$ هي",
+      "options": [
+        "$40km$",
+        "$60km$",
+        "$50km$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": true,
+      "work": "المسافة غير محددة دون معرفة اتجاه المدن"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 76,
+      "number": 18,
+      "body": "يستطيع كل عامل في أحد المصانع أن يقوم بتجميع إما برادين أو خمس غسالات في اليوم . كم عامل نحتاج لتجميع 20 براد و100 غسالة خلال ثلاثة أيام ؟",
+      "options": [
+        "$10$",
+        "$30$",
+        "$20$",
+        "$15$"
+      ],
+      "answerIndex": 0,
+      "verified": true,
+      "work": "10 + 20 = 30 يوم-عامل ÷ 3 أيام = 10 عمال"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 76,
+      "number": 19,
+      "body": "في كل مرة يقوم جاسم باستخدام بطاقة الائتمان يستهلك ثلاثة أخماس رصيده. إذا كان رصيد جاسم قبل استخدام البطاقة 125 دينار . فما هو رصيده بعد استخدام البطاقة ثلاث مرات ؟",
+      "options": [
+        "$3.200\\ kd$",
+        "$8\\ kd$",
+        "$20\\ kd$",
+        "$5\\ kd$"
+      ],
+      "answerIndex": 1,
+      "verified": true,
+      "work": "يتبقى الخمسان كل مرة: 125 × (2/5)³ = 8"
+    },
+    {
+      "topic": "mock-exam",
+      "section": "اختبار تجريبي",
+      "page": 76,
+      "number": 20,
+      "body": "ليكن $x$ عدد صحيح بحيث $5x$ هو تربيع لأحد الأعداد الصحيحة. ما هي أصغر قيمة يمكن أن تأخذها $x$ ؟",
+      "options": [
+        "$4$",
+        "$9$",
+        "$125$",
+        "ليس أيا مما سبق"
+      ],
+      "answerIndex": 3,
+      "verified": true,
+      "work": "أصغر قيمة x=5 لأن 25 مربع كامل، وهي غير مذكورة"
+    }
+  ]
+}

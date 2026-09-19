@@ -16,6 +16,7 @@ export const navItems: NavItem[] = [
   { label: "My Students", href: "/my-students", icon: "📋", roles: ["admin", "employee"] },
   { label: "Annual Meeting", href: "/annual-meeting", icon: "📅", roles: ["admin", "employee"] },
   { label: "Lucky Draw", href: "/draw", icon: "🎲", roles: ["admin"] },
+  { label: "Unified Exam", href: "/unified-exam", icon: "📝", roles: ["admin"] },
   { label: "Messages", href: "/messages", icon: "💬", roles: ["admin"] },
   { label: "Users", href: "/users", icon: "👥", roles: ["admin"] },
   { label: "Settings", href: "/settings", icon: "⚙️", roles: ["admin"] },

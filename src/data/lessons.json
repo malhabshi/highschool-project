@@ -1,0 +1,54 @@
+{
+  "_note": "Study material: the non-question pages of the booklet, served as page images from /public/booklet. Each lesson points at the class-work section that practises it, so a student can read then solve.",
+  "lessons": [
+    {
+      "id": "real-numbers",
+      "title": "الأعداد الحقيقية",
+      "titleEn": "Real numbers",
+      "pages": [1, 2, 3, 4, 5, 6],
+      "classWork": "تمارين على الأعداد الحقيقية"
+    },
+    {
+      "id": "polynomials",
+      "title": "الحدوديات",
+      "titleEn": "Polynomials",
+      "pages": [13, 14, 15],
+      "classWork": "تمارين على الحدوديات"
+    },
+    {
+      "id": "inequalities",
+      "title": "المتباينات",
+      "titleEn": "Inequalities",
+      "pages": [21, 22],
+      "classWork": "تمارين على المتباينات"
+    },
+    {
+      "id": "absolute-value",
+      "title": "القيمة المطلقة",
+      "titleEn": "Absolute value",
+      "pages": [30, 31, 32],
+      "classWork": "تمارين على القيمة المطلقة"
+    },
+    {
+      "id": "real-functions",
+      "title": "الدوال الحقيقية",
+      "titleEn": "Real functions",
+      "pages": [41, 42, 43, 44],
+      "classWork": "تمارين على الدوال الحقيقية"
+    },
+    {
+      "id": "life-applications",
+      "title": "تطبيقات حياتية",
+      "titleEn": "Life applications",
+      "pages": [51, 52, 53, 54, 55, 56, 57],
+      "classWork": "تمارين على تطبيقات حياتية"
+    },
+    {
+      "id": "strategies",
+      "title": "الاستراتيجيات والنمذجة",
+      "titleEn": "Strategies and modelling",
+      "pages": [64],
+      "classWork": "تمارين على الاستراتيجيات والنمذجة"
+    }
+  ]
+}
