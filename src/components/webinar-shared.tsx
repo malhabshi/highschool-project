@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { VideoTile } from "@/components/video-call";
 import type { Participant } from "@/lib/video-call";
 import { useActiveSpeaker } from "@/lib/active-speaker";
+import type { WebinarQuestion } from "@/lib/webinars";
 
 export type ChatMessage = {
   id: string;
@@ -160,4 +161,92 @@ export function StatusBadge({ status }: { status: "scheduled" | "live" | "ended"
   }[status];
   const label = { scheduled: "Scheduled", live: "● Live", ended: "Ended" }[status];
   return <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${styles}`}>{label}</span>;
+}
+
+// The audience, for hosts: raised hands first, with stage and host controls.
+// `onHost` is only passed for staff (guest hosts can't make more hosts).
+export function PeopleList({
+  people,
+  onStage,
+  onHost,
+}: {
+  people: Participant[];
+  onStage: (p: Participant, on: boolean) => void;
+  onHost?: (p: Participant, on: boolean) => void;
+}) {
+  if (people.length === 0) {
+    return <p className="p-6 text-center text-sm text-slate-400">No viewers yet.</p>;
+  }
+  const btn = "rounded-md px-2 py-1 text-xs font-medium";
+  return (
+    <ul className="divide-y divide-slate-100">
+      {[...people]
+        .sort((a, b) => Number(b.host) - Number(a.host) || Number(b.hand) - Number(a.hand))
+        .map((p) => (
+          <li key={p.peerId} className="flex flex-wrap items-center gap-1.5 px-4 py-2.5 text-sm">
+            <span className="min-w-0 flex-1 truncate text-slate-800">
+              {p.hand && !p.onStage && "✋ "}
+              {p.name}
+              {p.host ? (
+                <span className="ml-1.5 rounded bg-blue-100 px-1 py-0.5 text-[10px] font-medium uppercase text-blue-700">
+                  Host
+                </span>
+              ) : (
+                p.onStage && <span className="ml-1.5 text-xs font-medium text-green-700">on stage</span>
+              )}
+            </span>
+            {!p.host &&
+              (p.onStage ? (
+                <button onClick={() => onStage(p, false)} className={`${btn} text-red-600 hover:bg-red-50`}>
+                  Remove from stage
+                </button>
+              ) : (
+                <button
+                  onClick={() => onStage(p, true)}
+                  className={`${btn} bg-blue-50 text-blue-700 hover:bg-blue-100`}
+                >
+                  Invite to speak
+                </button>
+              ))}
+            {onHost && p.secretHash && (
+              <button
+                onClick={() => onHost(p, !p.host)}
+                className={`${btn} ${p.host ? "text-red-600 hover:bg-red-50" : "text-slate-600 hover:bg-slate-100"}`}
+              >
+                {p.host ? "Remove host" : "Make host"}
+              </button>
+            )}
+          </li>
+        ))}
+    </ul>
+  );
+}
+
+export function QuestionsList({
+  questions,
+  onAnswered,
+}: {
+  questions: WebinarQuestion[];
+  onAnswered: (id: string, answered: boolean) => void;
+}) {
+  if (questions.length === 0) {
+    return <p className="p-6 text-center text-sm text-slate-400">No questions yet.</p>;
+  }
+  const ordered = [...questions].sort((a, b) => Number(a.answered) - Number(b.answered));
+  return (
+    <ul className="divide-y divide-slate-100">
+      {ordered.map((q) => (
+        <li key={q.id} className={`px-4 py-3 text-sm ${q.answered ? "opacity-50" : ""}`}>
+          <div className="font-medium text-slate-800">{q.name}</div>
+          <p className="whitespace-pre-wrap break-words text-slate-700">{q.text}</p>
+          <button
+            onClick={() => onAnswered(q.id, !q.answered)}
+            className="mt-1 text-xs font-medium text-blue-600 hover:underline"
+          >
+            {q.answered ? "Mark unanswered" : "✓ Mark answered"}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
 }

@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Banner, ControlButton } from "@/components/video-call";
 import {
   ChatPanel,
+  PeopleList,
+  QuestionsList,
   Stage,
   StatusBadge,
   Tabs,
@@ -16,8 +18,13 @@ import {
   WEBINAR_VIEWER_LIMIT,
   askWebinarQuestion,
   formatWebinarTime,
+  getGuestKey,
   getPublicWebinar,
+  guestEndWebinar,
+  guestIsHost,
   registerForWebinar,
+  useGuestQuestions,
+  type GuestKey,
   webinarTopic,
   type Webinar,
 } from "@/lib/webinars";
@@ -52,12 +59,14 @@ export function WebinarPublic({ code }: { code: string }) {
     "landing"
   );
   const [viewer, setViewer] = useState<Viewer>({ name: "", email: "", phone: "" });
+  const [guestKey, setGuestKey] = useState<GuestKey | null>(null);
 
   useEffect(() => {
     let active = true;
-    getPublicWebinar(code).then((w) => {
+    Promise.all([getPublicWebinar(code), getGuestKey(code)]).then(([w, key]) => {
       if (!active) return;
       setWebinar(w);
+      setGuestKey(key);
       setViewer(loadViewer());
       if (w?.status === "ended") setPhase("ended");
       setLoaded(true);
@@ -90,10 +99,11 @@ export function WebinarPublic({ code }: { code: string }) {
             title="This webinar is full"
             body="We've reached the maximum number of viewers. Please try again a little later."
           />
-        ) : phase === "room" ? (
+        ) : phase === "room" && guestKey ? (
           <ViewerRoom
             webinar={webinar}
             name={viewer.name}
+            guestKey={guestKey}
             onEnded={() => setPhase("ended")}
             onFull={() => setPhase("full")}
             onLeave={() => setPhase("landing")}
@@ -241,18 +251,20 @@ function Landing({
   );
 }
 
-type Tab = "chat" | "qa";
+type Tab = "chat" | "qa" | "people";
 type MyQuestion = { id: string; text: string; answered: boolean };
 
 function ViewerRoom({
   webinar,
   name,
+  guestKey,
   onEnded,
   onFull,
   onLeave,
 }: {
   webinar: Webinar;
   name: string;
+  guestKey: GuestKey;
   onEnded: () => void;
   onFull: () => void;
   onLeave: () => void;
@@ -264,10 +276,28 @@ function ViewerRoom({
   const [myQuestions, setMyQuestions] = useState<MyQuestion[]>([]);
   const [question, setQuestion] = useState("");
   const [qError, setQError] = useState<string | null>(null);
+  // Made host by staff (a "guest host"): presenter controls, Q&A and ending.
+  const [isHost, setIsHost] = useState(false);
+  const [hostNotice, setHostNotice] = useState<string | null>(null);
+  const guestQ = useGuestQuestions(webinar.code, guestKey, isHost);
+
+  const becomeHost = useCallback(
+    (actions: { setHost: (on: boolean) => void; goOnStage: () => unknown }) => {
+      setIsHost(true);
+      setInvited(false);
+      actions.setHost(true);
+      actions.goOnStage();
+      setHostNotice(
+        "You're now a host. You can present, share your screen, invite speakers, answer questions and end the webinar."
+      );
+    },
+    []
+  );
 
   const room = useMeshRoom({
     topic: webinarTopic(webinar.code),
     name,
+    secretHash: guestKey.hash,
     startOnStage: false,
     onMessage: (m, actions) => {
       if (m.type === "chat") {
@@ -275,16 +305,43 @@ function ViewerRoom({
       } else if (m.type === "stage") {
         setInvited(!!m.on);
         if (!m.on) actions.leaveStage(); // the host took us off stage
+      } else if (m.type === "host") {
+        if (m.on) becomeHost(actions);
+        else {
+          setIsHost(false);
+          actions.setHost(false);
+          actions.leaveStage();
+          setTab("chat");
+          setHostNotice("You're no longer a host.");
+        }
       } else if (m.type === "answered") {
         setMyQuestions((prev) =>
           prev.map((q) => (q.id === m.id ? { ...q, answered: !!m.answered } : q))
         );
+        guestQ.refetch();
+      } else if (m.type === "qa-asked") {
+        guestQ.refetch();
       } else if (m.type === "ended") {
         onEnded();
       }
     },
   });
+
+  // A guest host who reloaded the page is still host.
+  const { setHost, goOnStage } = room;
+  const joined = room.status === "joined";
+  useEffect(() => {
+    if (!joined) return;
+    let active = true;
+    guestIsHost(webinar.code, guestKey).then((yes) => {
+      if (yes && active) becomeHost({ setHost, goOnStage });
+    });
+    return () => {
+      active = false;
+    };
+  }, [joined, webinar.code, guestKey, becomeHost, setHost, goOnStage]);
   const hosts = room.participants.filter((p) => p.host);
+  const audience = room.participants.filter((p) => !p.staff);
   const live = hosts.some((h) => h.onStage);
   // Remember that it has started, so a host stepping away reads as a pause.
   const [wasLive, setWasLive] = useState(false);
@@ -315,7 +372,7 @@ function ViewerRoom({
             name: `${name} (you)`,
             micOn: room.micOn,
             camOn: room.camOn,
-            sharing: false,
+            sharing: room.sharing,
             isLocal: true,
           },
         ]
@@ -323,7 +380,7 @@ function ViewerRoom({
   ];
 
   function sendChat(text: string) {
-    const msg: ChatMessage = { id: uid(), name, text, host: false, at: Date.now() };
+    const msg: ChatMessage = { id: uid(), name, text, host: isHost, at: Date.now() };
     room.send({ type: "chat", ...msg });
     setChat((prev) => [...prev, msg]);
   }
@@ -340,6 +397,22 @@ function ViewerRoom({
     }
     setMyQuestions((prev) => [...prev, { id, text, answered: false }]);
     setQuestion("");
+    room.send({ type: "qa-asked" }); // lets guest hosts refresh their list
+  }
+
+  function markAnswered(id: string, answered: boolean) {
+    guestQ.setAnswered(id, answered);
+    room.send({ type: "answered", id, answered });
+  }
+
+  async function endWebinar() {
+    if (!window.confirm("End the webinar for everyone?")) return;
+    if (!(await guestEndWebinar(webinar.code, guestKey))) {
+      window.alert("Couldn't end the webinar. You may no longer be a host.");
+      return;
+    }
+    room.send({ type: "ended" });
+    onEnded();
   }
 
   function joinStage(withDevices: boolean) {
@@ -363,6 +436,14 @@ function ViewerRoom({
         <Banner tone="red">Couldn&apos;t connect. Check your internet connection and reload.</Banner>
       )}
       {room.mediaError && room.me.onStage && <Banner tone="amber">{room.mediaError}</Banner>}
+      {hostNotice && (
+        <div className="flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          <span className="flex-1">⭐ {hostNotice}</span>
+          <button onClick={() => setHostNotice(null)} className="font-medium hover:underline">
+            OK
+          </button>
+        </div>
+      )}
       {invited && !room.me.onStage && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
           <span className="flex-1">
@@ -429,8 +510,18 @@ function ViewerRoom({
                   off={!room.camOn}
                   label={room.camOn ? "📷 Stop video" : "📷 Start video"}
                 />
+                {isHost && (
+                  <ControlButton
+                    onClick={room.toggleScreen}
+                    off={false}
+                    active={room.sharing}
+                    label={room.sharing ? "🖥️ Stop sharing" : "🖥️ Share screen"}
+                  />
+                )}
                 <ControlButton onClick={room.leaveStage} off={false} label="⬇️ Leave stage" />
               </>
+            ) : isHost ? (
+              <ControlButton onClick={() => room.goOnStage()} off={false} label="🎥 Join stage" />
             ) : (
               <ControlButton
                 onClick={() => room.setHand(!room.me.hand)}
@@ -445,20 +536,55 @@ function ViewerRoom({
             >
               Leave
             </button>
+            {isHost && (
+              <button
+                onClick={endWebinar}
+                className="rounded-lg bg-red-800 px-4 py-2 text-sm font-semibold text-white hover:bg-red-900"
+              >
+                End webinar
+              </button>
+            )}
           </div>
         </div>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <Tabs<Tab>
-            tabs={[
-              { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.length - seenChat },
-              { id: "qa", label: "Ask a question" },
-            ]}
+            tabs={
+              isHost
+                ? [
+                    { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.length - seenChat },
+                    {
+                      id: "qa",
+                      label: "Q&A",
+                      badge: guestQ.questions.filter((q) => !q.answered).length,
+                    },
+                    {
+                      id: "people",
+                      label: "People",
+                      badge: audience.filter((p) => p.hand && !p.onStage).length,
+                    },
+                  ]
+                : [
+                    { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.length - seenChat },
+                    { id: "qa", label: "Ask a question" },
+                  ]
+            }
             active={tab}
             onChange={changeTab}
           />
           {tab === "chat" ? (
             <ChatPanel messages={chat} onSend={sendChat} />
+          ) : isHost && tab === "qa" ? (
+            <div className="h-96 overflow-y-auto">
+              <QuestionsList questions={guestQ.questions} onAnswered={markAnswered} />
+            </div>
+          ) : isHost && tab === "people" ? (
+            <div className="h-96 overflow-y-auto">
+              <PeopleList
+                people={audience}
+                onStage={(p, on) => room.send({ type: "stage", to: p.peerId, on })}
+              />
+            </div>
           ) : (
             <div className="flex h-96 flex-col">
               <div className="flex-1 space-y-2 overflow-y-auto p-3">

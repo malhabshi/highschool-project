@@ -9,11 +9,13 @@ import {
   ChatPanel,
   Stage,
   StatusBadge,
+  PeopleList,
+  QuestionsList,
   Tabs,
   type ChatMessage,
   type StageTile,
 } from "@/components/webinar-shared";
-import { useMeshRoom } from "@/lib/video-call";
+import { useMeshRoom, type Participant } from "@/lib/video-call";
 import { uid } from "@/lib/uid";
 import {
   WEBINAR_VIEWER_LIMIT,
@@ -26,7 +28,8 @@ import {
   useWebinarQuestions,
   webinarTopic,
   type Webinar,
-  type WebinarQuestion,
+  grantGuestHost,
+  revokeGuestHost,
 } from "@/lib/webinars";
 
 export function WebinarStudio({ id }: { id: string }) {
@@ -166,6 +169,7 @@ function HostRoom({
     topic: webinarTopic(webinar.code),
     name: myName,
     host: true,
+    staff: true,
     startOnStage: true,
     onMessage: (m) => {
       if (m.type === "chat") setChat((prev) => [...prev, m as unknown as ChatMessage]);
@@ -173,7 +177,8 @@ function HostRoom({
   });
   const { questions, setAnswered } = useWebinarQuestions(webinar.id);
 
-  const audience = room.participants.filter((p) => !p.host);
+  // Everyone who isn't staff — including attendees we've made host.
+  const audience = room.participants.filter((p) => !p.staff);
   const hands = audience.filter((p) => p.hand && !p.onStage);
   const unanswered = questions.filter((q) => !q.answered).length;
 
@@ -204,6 +209,18 @@ function HostRoom({
     room.send({ type: "answered", id, answered });
   }
 
+  async function setGuestHost(p: Participant, on: boolean) {
+    if (on) {
+      if (!(await grantGuestHost(webinar.id, p.secretHash, p.name))) {
+        window.alert("Couldn't make them host. Please try again.");
+        return;
+      }
+    } else {
+      await revokeGuestHost(webinar.id, p.secretHash);
+    }
+    room.send({ type: "host", to: p.peerId, on });
+  }
+
   function end() {
     if (!window.confirm("End the webinar for everyone?")) return;
     room.send({ type: "ended" });
@@ -220,12 +237,16 @@ function HostRoom({
       {leaving && (
         <LeaveDialog
           webinar={webinar}
+          attendees={audience.filter((p) => p.secretHash)}
           otherHostsPresent={room.participants.some((p) => p.host)}
           onCancel={() => setLeaving(false)}
-          onLeave={(newHostId) => {
+          onLeave={async (next) => {
             setLeaving(false);
-            room.send({ type: "host-away" });
-            onLeave(newHostId);
+            if (next.guest && !next.guest.host) await setGuestHost(next.guest, true);
+            if (!room.participants.some((p) => p.host) && !next.guest) {
+              room.send({ type: "host-away" });
+            }
+            onLeave(next.staffId);
           }}
         />
       )}
@@ -300,40 +321,11 @@ function HostRoom({
           )}
           {tab === "people" && (
             <div className="h-96 overflow-y-auto">
-              {audience.length === 0 ? (
-                <p className="p-6 text-center text-sm text-slate-400">No viewers yet.</p>
-              ) : (
-                <ul className="divide-y divide-slate-100">
-                  {[...audience]
-                    .sort((a, b) => Number(b.hand) - Number(a.hand))
-                    .map((p) => (
-                      <li key={p.peerId} className="flex items-center gap-2 px-4 py-2.5 text-sm">
-                        <span className="min-w-0 flex-1 truncate text-slate-800">
-                          {p.hand && !p.onStage && "✋ "}
-                          {p.name}
-                          {p.onStage && (
-                            <span className="ml-1.5 text-xs font-medium text-green-700">on stage</span>
-                          )}
-                        </span>
-                        {p.onStage ? (
-                          <button
-                            onClick={() => room.send({ type: "stage", to: p.peerId, on: false })}
-                            className="rounded-md px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                          >
-                            Remove from stage
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => room.send({ type: "stage", to: p.peerId, on: true })}
-                            className="rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100"
-                          >
-                            Invite to speak
-                          </button>
-                        )}
-                      </li>
-                    ))}
-                </ul>
-              )}
+              <PeopleList
+                people={audience}
+                onStage={(p, on) => room.send({ type: "stage", to: p.peerId, on })}
+                onHost={setGuestHost}
+              />
             </div>
           )}
           {tab === "registrations" && (
@@ -382,18 +374,30 @@ function HostPicker({ webinar, onChanged }: { webinar: Webinar; onChanged: () =>
 
 function LeaveDialog({
   webinar,
+  attendees,
   otherHostsPresent,
   onCancel,
   onLeave,
 }: {
   webinar: Webinar;
+  attendees: Participant[];
   otherHostsPresent: boolean;
   onCancel: () => void;
-  onLeave: (newHostId: string | null) => void;
+  onLeave: (next: { staffId: string | null; guest: Participant | null }) => void;
 }) {
   const { user } = useRole();
   const { users } = useUsers();
-  const [next, setNext] = useState(webinar.hostId ?? user.id);
+  // "staff:<profile id>" or "guest:<peer id>"
+  const [next, setNext] = useState(`staff:${webinar.hostId ?? user.id}`);
+
+  function confirm() {
+    const [kind, id] = next.split(":");
+    if (kind === "guest") {
+      onLeave({ staffId: null, guest: attendees.find((p) => p.peerId === id) ?? null });
+    } else {
+      onLeave({ staffId: id, guest: null });
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -414,15 +418,29 @@ function LeaveDialog({
             onChange={(e) => setNext(e.target.value)}
             className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700"
           >
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name || u.email}
-                {u.id === user.id ? " (you — come back later)" : ""}
-              </option>
-            ))}
+            <optgroup label="Staff">
+              {users.map((u) => (
+                <option key={u.id} value={`staff:${u.id}`}>
+                  {u.name || u.email}
+                  {u.id === user.id ? " (you — come back later)" : ""}
+                </option>
+              ))}
+            </optgroup>
+            {attendees.length > 0 && (
+              <optgroup label="Attendees (in the webinar now)">
+                {attendees.map((p) => (
+                  <option key={p.peerId} value={`guest:${p.peerId}`}>
+                    {p.name}
+                    {p.host ? " (already host)" : ""}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
           <span className="block text-xs text-slate-400">
-            They&apos;ll see a red LIVE badge on Webinars and can join from there.
+            {next.startsWith("guest:")
+              ? "They become host right away: camera, screen sharing, speakers, Q&A and ending the webinar."
+              : "They'll see a red LIVE badge on Webinars and can join from there."}
           </span>
         </label>
         <div className="flex justify-end gap-2">
@@ -433,7 +451,7 @@ function LeaveDialog({
             Stay
           </button>
           <button
-            onClick={() => onLeave(next)}
+            onClick={confirm}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
           >
             Leave
@@ -490,33 +508,4 @@ function RegistrationsList({ webinarId }: { webinarId: string }) {
 function QuestionsPanel({ webinarId }: { webinarId: string }) {
   const { questions, setAnswered } = useWebinarQuestions(webinarId);
   return <QuestionsList questions={questions} onAnswered={setAnswered} />;
-}
-
-function QuestionsList({
-  questions,
-  onAnswered,
-}: {
-  questions: WebinarQuestion[];
-  onAnswered: (id: string, answered: boolean) => void;
-}) {
-  if (questions.length === 0) {
-    return <p className="p-6 text-center text-sm text-slate-400">No questions yet.</p>;
-  }
-  const ordered = [...questions].sort((a, b) => Number(a.answered) - Number(b.answered));
-  return (
-    <ul className="divide-y divide-slate-100">
-      {ordered.map((q) => (
-        <li key={q.id} className={`px-4 py-3 text-sm ${q.answered ? "opacity-50" : ""}`}>
-          <div className="font-medium text-slate-800">{q.name}</div>
-          <p className="whitespace-pre-wrap break-words text-slate-700">{q.text}</p>
-          <button
-            onClick={() => onAnswered(q.id, !q.answered)}
-            className="mt-1 text-xs font-medium text-blue-600 hover:underline"
-          >
-            {q.answered ? "Mark unanswered" : "✓ Mark answered"}
-          </button>
-        </li>
-      ))}
-    </ul>
-  );
 }

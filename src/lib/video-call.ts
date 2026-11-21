@@ -29,8 +29,10 @@ export const MESH_COMFORT_LIMIT = 5;
 
 export type Presence = {
   name: string;
-  host: boolean; // webinar host/co-host (always false in plain calls)
+  staff: boolean; // logged-in staff member (webinar studio)
+  secretHash: string; // webinar attendees: hash of their guest-host secret
   joinedAt: number;
+  host: boolean; // webinar host: staff in the studio, or a guest made host
   onStage: boolean;
   micOn: boolean;
   camOn: boolean;
@@ -38,10 +40,11 @@ export type Presence = {
   hand: boolean; // raised hand (webinars)
 };
 
-type Member = Pick<Presence, "name" | "host" | "joinedAt">;
+type Member = Pick<Presence, "name" | "staff" | "secretHash" | "joinedAt">;
 type LiveState = Omit<Presence, keyof Member>;
 
 const OFF_STAGE: LiveState = {
+  host: false,
   onStage: false,
   micOn: false,
   camOn: false,
@@ -85,6 +88,7 @@ export type RoomActions = {
   goOnStage: (opts?: { mic?: boolean; cam?: boolean }) => Promise<void>;
   leaveStage: () => void;
   setHand: (up: boolean) => void;
+  setHost: (on: boolean) => void;
   send: (msg: RoomMessage) => void;
 };
 
@@ -112,19 +116,23 @@ function iceServers(): RTCIceServer[] {
 const closingChannels = new Map<string, Promise<unknown>>();
 
 function liveState(p: Presence): LiveState {
-  return { onStage: p.onStage, micOn: p.micOn, camOn: p.camOn, sharing: p.sharing, hand: p.hand };
+  return { host: p.host, onStage: p.onStage, micOn: p.micOn, camOn: p.camOn, sharing: p.sharing, hand: p.hand };
 }
 
 export function useMeshRoom({
   topic,
   name,
   host = false,
+  staff = false,
+  secretHash = "",
   startOnStage = true,
   onMessage,
 }: {
   topic: string;
   name: string;
   host?: boolean;
+  staff?: boolean;
+  secretHash?: string;
   startOnStage?: boolean;
   onMessage?: (msg: RoomMessage, actions: RoomActions) => void;
 }) {
@@ -136,7 +144,14 @@ export function useMeshRoom({
   const [remoteStreams, setRemoteStreams] = useState<Record<string, MediaStream>>({});
   const [members, setMembers] = useState<Record<string, Member>>({});
   const [liveStates, setLiveStates] = useState<Record<string, LiveState>>({});
-  const [me, setMe] = useState<Presence>({ name, host, joinedAt: 0, ...OFF_STAGE });
+  const [me, setMe] = useState<Presence>({
+    name,
+    staff,
+    secretHash,
+    joinedAt: 0,
+    ...OFF_STAGE,
+    host,
+  });
 
   const stateRef = useRef(me);
   const actionsRef = useRef<RoomActions | null>(null);
@@ -435,6 +450,9 @@ export function useMeshRoom({
       setHand(up) {
         publish({ hand: up });
       },
+      setHost(on) {
+        publish({ host: on });
+      },
       send(msg) {
         channel?.send({ type: "broadcast", event: "app", payload: { ...msg, from: myId } });
       },
@@ -478,7 +496,12 @@ export function useMeshRoom({
           for (const [key, metas] of Object.entries(state)) {
             if (key !== myId && metas.length) {
               const m = metas[metas.length - 1];
-              next[key] = { name: m.name, host: m.host, joinedAt: m.joinedAt };
+              next[key] = {
+                name: m.name,
+                staff: !!m.staff,
+                secretHash: m.secretHash ?? "",
+                joinedAt: m.joinedAt,
+              };
             }
           }
           // Someone new: tell them our current mic/camera/stage state (once,
@@ -498,8 +521,8 @@ export function useMeshRoom({
         .subscribe(async (s) => {
           if (cancelled) return;
           if (s === "SUBSCRIBED") {
-            const { name, host, joinedAt } = stateRef.current;
-            await ch.track({ name, host, joinedAt });
+            const { name, staff, secretHash, joinedAt } = stateRef.current;
+            await ch.track({ name, staff, secretHash, joinedAt });
             joined = true;
             announceState();
             setStatus("joined");
@@ -533,6 +556,18 @@ export function useMeshRoom({
     };
   }, [topic, myId, startOnStage]);
 
+  // Stable functions (same identity every render) that call the live room.
+  const [controls] = useState(() => ({
+    toggleMic: () => actionsRef.current?.toggleMic(),
+    toggleCam: () => actionsRef.current?.toggleCam(),
+    toggleScreen: () => actionsRef.current?.toggleScreen(),
+    goOnStage: (opts?: { mic?: boolean; cam?: boolean }) => actionsRef.current?.goOnStage(opts),
+    leaveStage: () => actionsRef.current?.leaveStage(),
+    setHand: (up: boolean) => actionsRef.current?.setHand(up),
+    setHost: (on: boolean) => actionsRef.current?.setHost(on),
+    send: (msg: RoomMessage) => actionsRef.current?.send(msg),
+  }));
+
   const participants: Participant[] = Object.entries(members)
     .map(([peerId, m]) => ({
       ...m,
@@ -555,13 +590,7 @@ export function useMeshRoom({
     camOn: me.camOn,
     sharing: me.sharing,
     participants,
-    toggleMic: () => actionsRef.current?.toggleMic(),
-    toggleCam: () => actionsRef.current?.toggleCam(),
-    toggleScreen: () => actionsRef.current?.toggleScreen(),
-    goOnStage: (opts?: { mic?: boolean; cam?: boolean }) => actionsRef.current?.goOnStage(opts),
-    leaveStage: () => actionsRef.current?.leaveStage(),
-    setHand: (up: boolean) => actionsRef.current?.setHand(up),
-    send: (msg: RoomMessage) => actionsRef.current?.send(msg),
+    ...controls,
   };
 }
 

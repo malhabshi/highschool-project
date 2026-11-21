@@ -148,3 +148,80 @@ grant execute on function register_for_webinar(text, text, text, text) to anon, 
 grant execute on function ask_webinar_question(text, text, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ───────── Guest hosts (attendees made host by staff) ─────────
+-- Each attendee's browser keeps a random secret and shares only its SHA-256
+-- hash. Staff grant hosting to that hash; the guest proves it by sending the
+-- secret, which never goes over the shared realtime channel.
+create table if not exists webinar_guest_hosts (
+  id uuid primary key default gen_random_uuid(),
+  webinar_id uuid not null references webinars(id) on delete cascade,
+  secret_hash text not null,
+  name text not null default '',
+  revoked boolean not null default false,
+  created_at timestamptz not null default now(),
+  unique (webinar_id, secret_hash)
+);
+alter table webinar_guest_hosts enable row level security;
+drop policy if exists "auth all" on webinar_guest_hosts;
+create policy "auth all" on webinar_guest_hosts
+  for all to authenticated using (true) with check (true);
+
+-- The webinar id if this secret belongs to an active guest host, else null.
+create or replace function guest_host_webinar(p_code text, p_secret text)
+returns uuid
+language sql stable security definer set search_path = public as $$
+  select w.id from webinars w
+  join webinar_guest_hosts g on g.webinar_id = w.id
+  where w.code = p_code and w.status <> 'ended' and not g.revoked
+    and g.secret_hash = encode(sha256(convert_to(coalesce(p_secret, ''), 'UTF8')), 'hex');
+$$;
+
+create or replace function guest_is_host(p_code text, p_secret text)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select guest_host_webinar(p_code, p_secret) is not null;
+$$;
+
+create or replace function guest_list_questions(p_code text, p_secret text)
+returns table (id uuid, name text, text text, answered boolean, created_at timestamptz)
+language plpgsql stable security definer set search_path = public as $$
+declare w_id uuid := guest_host_webinar(p_code, p_secret);
+begin
+  if w_id is null then raise exception 'not a host'; end if;
+  return query
+    select q.id, q.name, q.text, q.answered, q.created_at
+    from webinar_questions q where q.webinar_id = w_id
+    order by q.created_at;
+end;
+$$;
+
+create or replace function guest_set_question_answered(
+  p_code text, p_secret text, p_id uuid, p_answered boolean
+) returns void
+language plpgsql security definer set search_path = public as $$
+declare w_id uuid := guest_host_webinar(p_code, p_secret);
+begin
+  if w_id is null then raise exception 'not a host'; end if;
+  update webinar_questions set answered = p_answered
+    where id = p_id and webinar_id = w_id;
+end;
+$$;
+
+create or replace function guest_end_webinar(p_code text, p_secret text)
+returns void
+language plpgsql security definer set search_path = public as $$
+declare w_id uuid := guest_host_webinar(p_code, p_secret);
+begin
+  if w_id is null then raise exception 'not a host'; end if;
+  update webinars set status = 'ended' where id = w_id;
+end;
+$$;
+
+revoke execute on function guest_host_webinar(text, text) from public, anon, authenticated;
+grant execute on function guest_is_host(text, text) to anon, authenticated;
+grant execute on function guest_list_questions(text, text) to anon, authenticated;
+grant execute on function guest_set_question_answered(text, text, uuid, boolean) to anon, authenticated;
+grant execute on function guest_end_webinar(text, text) to anon, authenticated;
+
+notify pgrst, 'reload schema';

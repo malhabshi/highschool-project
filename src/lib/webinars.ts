@@ -319,3 +319,108 @@ export async function askWebinarQuestion(
   });
   return error ? null : (data as string);
 }
+
+// ───────── Guest hosts (attendees made host by staff) ─────────
+
+export type GuestKey = { secret: string; hash: string };
+
+async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// This browser's secret for a webinar. Kept for the tab's session so a guest
+// host who reloads the page is still host. Only the hash is ever shared.
+export async function getGuestKey(code: string): Promise<GuestKey> {
+  const storageKey = `masar-webinar-secret-${code}`;
+  let secret = "";
+  try {
+    secret = sessionStorage.getItem(storageKey) ?? "";
+  } catch {
+    // storage unavailable — a fresh secret works, it just won't survive a reload
+  }
+  if (!secret) {
+    secret = uid() + uid();
+    try {
+      sessionStorage.setItem(storageKey, secret);
+    } catch {
+      // see above
+    }
+  }
+  // crypto.subtle needs https; without it this attendee can't be made host.
+  const hash = crypto.subtle ? await sha256Hex(secret) : "";
+  return { secret, hash };
+}
+
+export async function grantGuestHost(webinarId: string, secretHash: string, name: string) {
+  const { error } = await supabase
+    .from("webinar_guest_hosts")
+    .upsert(
+      { webinar_id: webinarId, secret_hash: secretHash, name, revoked: false },
+      { onConflict: "webinar_id,secret_hash" }
+    );
+  return !error;
+}
+
+export async function revokeGuestHost(webinarId: string, secretHash: string) {
+  await supabase
+    .from("webinar_guest_hosts")
+    .update({ revoked: true })
+    .eq("webinar_id", webinarId)
+    .eq("secret_hash", secretHash);
+}
+
+export async function guestIsHost(code: string, key: GuestKey): Promise<boolean> {
+  const { data } = await supabase.rpc("guest_is_host", { p_code: code, p_secret: key.secret });
+  return data === true;
+}
+
+export async function guestEndWebinar(code: string, key: GuestKey): Promise<boolean> {
+  const { error } = await supabase.rpc("guest_end_webinar", { p_code: code, p_secret: key.secret });
+  return !error;
+}
+
+// Q&A for a guest host (they can't read the table directly). Refreshes every
+// few seconds; call `refetch` when a room message says something changed.
+export function useGuestQuestions(code: string, key: GuestKey, enabled: boolean) {
+  const [questions, setQuestions] = useState<WebinarQuestion[]>([]);
+
+  const refetch = useCallback(async () => {
+    const { data, error } = await supabase.rpc("guest_list_questions", {
+      p_code: code,
+      p_secret: key.secret,
+    });
+    if (error) return;
+    setQuestions(
+      ((data ?? []) as Record<string, unknown>[]).map((r) => ({
+        id: r.id as string,
+        name: r.name as string,
+        text: r.text as string,
+        answered: r.answered as boolean,
+        createdAt: r.created_at as string,
+      }))
+    );
+  }, [code, key.secret]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    refetch();
+    const timer = setInterval(refetch, 8000);
+    return () => clearInterval(timer);
+  }, [enabled, refetch]);
+
+  const setAnswered = useCallback(
+    async (id: string, answered: boolean) => {
+      setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, answered } : q)));
+      await supabase.rpc("guest_set_question_answered", {
+        p_code: code,
+        p_secret: key.secret,
+        p_id: id,
+        p_answered: answered,
+      });
+    },
+    [code, key.secret]
+  );
+
+  return { questions, setAnswered, refetch };
+}
