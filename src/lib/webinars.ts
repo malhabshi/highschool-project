@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { uid } from "@/lib/uid";
 import { newRoomCode } from "@/lib/video-room";
+import type { Participant } from "@/lib/video-call";
 
 // The webinar's audience connects straight to the presenter's browser, so the
 // presenter's upload limits how many can watch smoothly.
@@ -423,4 +424,79 @@ export function useGuestQuestions(code: string, key: GuestKey, enabled: boolean)
   );
 
   return { questions, setAnswered, refetch };
+}
+
+// ───────── Verified hosts (for private chat) ─────────
+
+export async function registerStaffHostKey(webinarId: string, peerId: string, publicKey: string) {
+  await supabase
+    .from("webinar_host_keys")
+    .upsert(
+      { webinar_id: webinarId, peer_id: peerId, public_key: publicKey },
+      { onConflict: "webinar_id,peer_id" }
+    );
+}
+
+export async function guestRegisterHostKey(
+  code: string,
+  key: GuestKey,
+  peerId: string,
+  publicKey: string
+) {
+  await supabase.rpc("guest_register_host_key", {
+    p_code: code,
+    p_secret: key.secret,
+    p_peer_id: peerId,
+    p_public_key: publicKey,
+  });
+}
+
+// Peer ids of people who are really hosts: they say so AND their encryption
+// key is registered in the database. Messages "to the hosts" only go to them,
+// and attendees only obey room controls from them. `refresh` re-checks now
+// (e.g. when a message arrives from someone who claims to be a host).
+export function useVerifiedHosts(code: string, participants: Participant[]) {
+  const [listed, setListed] = useState<Map<string, string>>(new Map());
+  const [nonce, setNonce] = useState(0);
+  const lastRefresh = useRef(0);
+
+  const claimed = participants.filter((p) => p.host && p.publicKey);
+  const signature = claimed.map((p) => `${p.peerId}:${p.publicKey}`).join("|");
+
+  useEffect(() => {
+    let active = true;
+    async function load() {
+      const { data } = await supabase.rpc("get_webinar_host_keys", { p_code: code });
+      if (!active) return;
+      setListed(
+        new Map(
+          ((data ?? []) as { peer_id: string; public_key: string }[]).map((r) => [
+            r.peer_id,
+            r.public_key,
+          ])
+        )
+      );
+    }
+    load();
+    // A new host registers their key a moment after they appear; check again.
+    const soon = setTimeout(load, 2500);
+    const timer = setInterval(load, 15000);
+    return () => {
+      active = false;
+      clearTimeout(soon);
+      clearInterval(timer);
+    };
+  }, [code, signature, nonce]);
+
+  const refresh = useCallback(() => {
+    // At most once a second, however many messages arrive.
+    if (Date.now() - lastRefresh.current < 1000) return;
+    lastRefresh.current = Date.now();
+    setNonce((n) => n + 1);
+  }, []);
+
+  const ids = new Set(
+    claimed.filter((p) => listed.get(p.peerId) === p.publicKey).map((p) => p.peerId)
+  );
+  return { ids, refresh };
 }

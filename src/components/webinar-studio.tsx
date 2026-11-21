@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
 import { useUsers } from "@/lib/users";
@@ -12,11 +12,11 @@ import {
   PeopleList,
   QuestionsList,
   Tabs,
-  type ChatMessage,
+  chatTargets,
+  useWebinarChat,
   type StageTile,
 } from "@/components/webinar-shared";
 import { useMeshRoom, type Participant } from "@/lib/video-call";
-import { uid } from "@/lib/uid";
 import {
   WEBINAR_VIEWER_LIMIT,
   formatWebinarTime,
@@ -29,7 +29,9 @@ import {
   webinarTopic,
   type Webinar,
   grantGuestHost,
+  registerStaffHostKey,
   revokeGuestHost,
+  useVerifiedHosts,
 } from "@/lib/webinars";
 
 export function WebinarStudio({ id }: { id: string }) {
@@ -160,10 +162,12 @@ function HostRoom({
 }) {
   const { user } = useRole();
   const [leaving, setLeaving] = useState(false);
-  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [tab, setTab] = useState<Tab>("chat");
   const [seenChat, setSeenChat] = useState(0);
   const myName = user.name || user.email;
+  const verifiedRef = useRef(new Set<string>());
+  const refreshHostsRef = useRef<() => void>(() => {});
+  const chat = useWebinarChat(myName, true, verifiedRef);
 
   const room = useMeshRoom({
     topic: webinarTopic(webinar.code),
@@ -172,9 +176,30 @@ function HostRoom({
     staff: true,
     startOnStage: true,
     onMessage: (m) => {
-      if (m.type === "chat") setChat((prev) => [...prev, m as unknown as ChatMessage]);
+      if (!chat.receive(m)) refreshHostsRef.current();
     },
   });
+  const { ids: verified, refresh: refreshHosts } = useVerifiedHosts(
+    webinar.code,
+    room.participants
+  );
+  useEffect(() => {
+    verifiedRef.current = verified;
+    refreshHostsRef.current = refreshHosts;
+  });
+  const verifiedKey = [...verified].sort().join(",");
+  const { releaseHeld } = chat;
+  useEffect(() => {
+    releaseHeld();
+  }, [verifiedKey, releaseHeld]);
+
+  // Register this browser's key so attendees know we're really a host.
+  const joined = room.status === "joined";
+  const { myId } = room;
+  const { publicKey } = room.me;
+  useEffect(() => {
+    if (joined && publicKey) registerStaffHostKey(webinar.id, myId, publicKey);
+  }, [joined, publicKey, myId, webinar.id]);
   const { questions, setAnswered } = useWebinarQuestions(webinar.id);
 
   // Everyone who isn't staff — including attendees we've made host.
@@ -198,11 +223,6 @@ function HostRoom({
       .map((p) => ({ key: p.peerId, ...p })),
   ];
 
-  function sendChat(text: string) {
-    const msg: ChatMessage = { id: uid(), name: myName, text, host: true, at: Date.now() };
-    room.send({ type: "chat", ...msg });
-    setChat((prev) => [...prev, msg]);
-  }
 
   function markAnswered(id: string, answered: boolean) {
     setAnswered(id, answered);
@@ -229,7 +249,7 @@ function HostRoom({
 
   function changeTab(t: Tab) {
     setTab(t);
-    if (t === "chat") setSeenChat(chat.length);
+    if (t === "chat") setSeenChat(chat.messages.length);
   }
 
   return (
@@ -305,7 +325,11 @@ function HostRoom({
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
           <Tabs<Tab>
             tabs={[
-              { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.length - seenChat },
+              {
+                id: "chat",
+                label: "Chat",
+                badge: tab === "chat" ? 0 : chat.messages.length - seenChat,
+              },
               { id: "qa", label: "Q&A", badge: unanswered },
               { id: "people", label: "People", badge: hands.length },
               { id: "registrations", label: "Registered" },
@@ -313,7 +337,13 @@ function HostRoom({
             active={tab}
             onChange={changeTab}
           />
-          {tab === "chat" && <ChatPanel messages={chat} onSend={sendChat} />}
+          {tab === "chat" && (
+            <ChatPanel
+              messages={chat.messages}
+              targets={chatTargets(true, room.participants, verified)}
+              onSend={(text, target) => chat.send(room, text, target, room.participants)}
+            />
+          )}
           {tab === "qa" && (
             <div className="h-96 overflow-y-auto">
               <QuestionsList questions={questions} onAnswered={markAnswered} />

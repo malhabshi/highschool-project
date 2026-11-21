@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Banner, ControlButton } from "@/components/video-call";
 import {
   ChatPanel,
@@ -9,11 +9,11 @@ import {
   Stage,
   StatusBadge,
   Tabs,
-  type ChatMessage,
+  chatTargets,
+  useWebinarChat,
   type StageTile,
 } from "@/components/webinar-shared";
-import { useMeshRoom } from "@/lib/video-call";
-import { uid } from "@/lib/uid";
+import { useMeshRoom, type RoomActions, type RoomMessage } from "@/lib/video-call";
 import {
   WEBINAR_VIEWER_LIMIT,
   askWebinarQuestion,
@@ -22,6 +22,8 @@ import {
   getPublicWebinar,
   guestEndWebinar,
   guestIsHost,
+  guestRegisterHostKey,
+  useVerifiedHosts,
   registerForWebinar,
   useGuestQuestions,
   type GuestKey,
@@ -269,7 +271,6 @@ function ViewerRoom({
   onFull: () => void;
   onLeave: () => void;
 }) {
-  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [tab, setTab] = useState<Tab>("chat");
   const [seenChat, setSeenChat] = useState(0);
   const [invited, setInvited] = useState(false);
@@ -280,6 +281,10 @@ function ViewerRoom({
   const [isHost, setIsHost] = useState(false);
   const [hostNotice, setHostNotice] = useState<string | null>(null);
   const guestQ = useGuestQuestions(webinar.code, guestKey, isHost);
+  const verifiedRef = useRef(new Set<string>());
+  const refreshHostsRef = useRef<() => void>(() => {});
+  const heldControls = useRef<{ m: RoomMessage; actions: RoomActions }[]>([]);
+  const chat = useWebinarChat(name, isHost, verifiedRef);
 
   const becomeHost = useCallback(
     (actions: { setHost: (on: boolean) => void; goOnStage: () => unknown }) => {
@@ -301,31 +306,72 @@ function ViewerRoom({
     startOnStage: false,
     onMessage: (m, actions) => {
       if (m.type === "chat") {
-        setChat((prev) => [...prev, m as unknown as ChatMessage]);
-      } else if (m.type === "stage") {
-        setInvited(!!m.on);
-        if (!m.on) actions.leaveStage(); // the host took us off stage
-      } else if (m.type === "host") {
-        if (m.on) becomeHost(actions);
-        else {
-          setIsHost(false);
-          actions.setHost(false);
-          actions.leaveStage();
-          setTab("chat");
-          setHostNotice("You're no longer a host.");
-        }
-      } else if (m.type === "answered") {
-        setMyQuestions((prev) =>
-          prev.map((q) => (q.id === m.id ? { ...q, answered: !!m.answered } : q))
-        );
-        guestQ.refetch();
+        if (!chat.receive(m)) refreshHostsRef.current();
       } else if (m.type === "qa-asked") {
         guestQ.refetch();
-      } else if (m.type === "ended") {
-        onEnded();
+      } else if (verifiedRef.current.has(m.from ?? "")) {
+        handleControl(m, actions);
+      } else {
+        // Room controls only count from a verified host. Hold it briefly in
+        // case the sender's host check simply hasn't come back yet.
+        heldControls.current = [...heldControls.current.slice(-19), { m, actions }];
+        refreshHostsRef.current();
       }
     },
   });
+
+  function handleControl(m: RoomMessage, actions: RoomActions) {
+    if (m.type === "stage") {
+      setInvited(!!m.on);
+      if (!m.on) actions.leaveStage(); // the host took us off stage
+    } else if (m.type === "host") {
+      if (m.on) becomeHost(actions);
+      else {
+        setIsHost(false);
+        actions.setHost(false);
+        actions.leaveStage();
+        setTab("chat");
+        setHostNotice("You're no longer a host.");
+      }
+    } else if (m.type === "answered") {
+      setMyQuestions((prev) =>
+        prev.map((q) => (q.id === m.id ? { ...q, answered: !!m.answered } : q))
+      );
+      guestQ.refetch();
+    } else if (m.type === "ended") {
+      onEnded();
+    }
+  }
+
+  const { ids: verified, refresh: refreshHosts } = useVerifiedHosts(
+    webinar.code,
+    room.participants
+  );
+  const handleControlRef = useRef(handleControl);
+  useEffect(() => {
+    verifiedRef.current = verified;
+    refreshHostsRef.current = refreshHosts;
+    handleControlRef.current = handleControl;
+  });
+  // Someone was just verified: deliver what we held back from them.
+  const verifiedKey = [...verified].sort().join(",");
+  const { releaseHeld } = chat;
+  useEffect(() => {
+    releaseHeld();
+    const waiting = heldControls.current;
+    heldControls.current = [];
+    for (const h of waiting) {
+      if (verifiedRef.current.has(h.m.from ?? "")) handleControlRef.current(h.m, h.actions);
+      else heldControls.current.push(h);
+    }
+  }, [verifiedKey, releaseHeld]);
+
+  // As a guest host, register our key so others know we're really a host.
+  const { myId } = room;
+  const { publicKey } = room.me;
+  useEffect(() => {
+    if (isHost && publicKey) guestRegisterHostKey(webinar.code, guestKey, myId, publicKey);
+  }, [isHost, publicKey, myId, webinar.code, guestKey]);
 
   // A guest host who reloaded the page is still host.
   const { setHost, goOnStage } = room;
@@ -379,11 +425,6 @@ function ViewerRoom({
       : []),
   ];
 
-  function sendChat(text: string) {
-    const msg: ChatMessage = { id: uid(), name, text, host: isHost, at: Date.now() };
-    room.send({ type: "chat", ...msg });
-    setChat((prev) => [...prev, msg]);
-  }
 
   async function ask(e: React.FormEvent) {
     e.preventDefault();
@@ -422,7 +463,7 @@ function ViewerRoom({
 
   function changeTab(t: Tab) {
     setTab(t);
-    if (t === "chat") setSeenChat(chat.length);
+    if (t === "chat") setSeenChat(chat.messages.length);
   }
 
   return (
@@ -552,7 +593,7 @@ function ViewerRoom({
             tabs={
               isHost
                 ? [
-                    { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.length - seenChat },
+                    { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.messages.length - seenChat },
                     {
                       id: "qa",
                       label: "Q&A",
@@ -565,7 +606,7 @@ function ViewerRoom({
                     },
                   ]
                 : [
-                    { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.length - seenChat },
+                    { id: "chat", label: "Chat", badge: tab === "chat" ? 0 : chat.messages.length - seenChat },
                     { id: "qa", label: "Ask a question" },
                   ]
             }
@@ -573,7 +614,11 @@ function ViewerRoom({
             onChange={changeTab}
           />
           {tab === "chat" ? (
-            <ChatPanel messages={chat} onSend={sendChat} />
+            <ChatPanel
+              messages={chat.messages}
+              targets={chatTargets(isHost, room.participants, verified)}
+              onSend={(text, target) => chat.send(room, text, target, room.participants)}
+            />
           ) : isHost && tab === "qa" ? (
             <div className="h-96 overflow-y-auto">
               <QuestionsList questions={guestQ.questions} onAnswered={markAnswered} />

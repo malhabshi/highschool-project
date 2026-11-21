@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { uid } from "@/lib/uid";
+import { createKeyPair, e2eAvailable, open, seal, sharedKeys, type SealedBox } from "@/lib/e2e";
 
 // Video rooms run peer-to-peer over WebRTC as a "mesh": participants connect
 // directly to each other. Supabase Realtime only carries the small setup
@@ -31,6 +32,7 @@ export type Presence = {
   name: string;
   staff: boolean; // logged-in staff member (webinar studio)
   secretHash: string; // webinar attendees: hash of their guest-host secret
+  publicKey: string; // for encrypted private messages ("" without https)
   joinedAt: number;
   host: boolean; // webinar host: staff in the studio, or a guest made host
   onStage: boolean;
@@ -40,7 +42,7 @@ export type Presence = {
   hand: boolean; // raised hand (webinars)
 };
 
-type Member = Pick<Presence, "name" | "staff" | "secretHash" | "joinedAt">;
+type Member = Pick<Presence, "name" | "staff" | "secretHash" | "publicKey" | "joinedAt">;
 type LiveState = Omit<Presence, keyof Member>;
 
 const OFF_STAGE: LiveState = {
@@ -90,6 +92,9 @@ export type RoomActions = {
   setHand: (up: boolean) => void;
   setHost: (on: boolean) => void;
   send: (msg: RoomMessage) => void;
+  // Encrypted so only the listed peers can read it; they receive it through
+  // onMessage with `sealed: true`.
+  sendPrivate: (to: string[], msg: RoomMessage) => Promise<void>;
 };
 
 // STUN lets each browser discover its public address. TURN relays media for
@@ -148,6 +153,7 @@ export function useMeshRoom({
     name,
     staff,
     secretHash,
+    publicKey: "",
     joinedAt: 0,
     ...OFF_STAGE,
     host,
@@ -171,6 +177,7 @@ export function useMeshRoom({
     let screen: MediaStreamTrack | null = null;
     let channel: RealtimeChannel | null = null;
     let announceTimer: ReturnType<typeof setTimeout> | null = null;
+    let keyFor: ((theirPublicKey: string) => Promise<CryptoKey>) | null = null;
 
     function announceState() {
       channel?.send({
@@ -456,7 +463,33 @@ export function useMeshRoom({
       send(msg) {
         channel?.send({ type: "broadcast", event: "app", payload: { ...msg, from: myId } });
       },
+      async sendPrivate(to, msg) {
+        if (!keyFor) return;
+        const boxes: Record<string, SealedBox> = {};
+        for (const id of to) {
+          const theirs = others[id]?.publicKey;
+          if (theirs) boxes[id] = await seal(await keyFor(theirs), JSON.stringify(msg));
+        }
+        if (Object.keys(boxes).length === 0) return;
+        channel?.send({
+          type: "broadcast",
+          event: "app",
+          payload: { type: "sealed", boxes, from: myId },
+        });
+      },
     };
+
+    async function openSealed(msg: RoomMessage) {
+      const box = (msg.boxes as Record<string, SealedBox> | undefined)?.[myId];
+      const theirs = msg.from ? others[msg.from]?.publicKey : "";
+      if (!box || !theirs || !keyFor) return;
+      try {
+        const inner = JSON.parse(await open(await keyFor(theirs), box)) as RoomMessage;
+        onMessageRef.current?.({ ...inner, from: msg.from, sealed: true }, actions);
+      } catch {
+        // not for us / tampered — ignore
+      }
+    }
     actionsRef.current = actions;
 
     async function start() {
@@ -468,6 +501,12 @@ export function useMeshRoom({
         }
         setLocalStream(local);
         stateRef.current = { ...stateRef.current, onStage: true, ...mediaState(local) };
+      }
+      if (e2eAvailable()) {
+        const pair = await createKeyPair();
+        if (cancelled) return;
+        keyFor = sharedKeys(pair.keys.privateKey);
+        stateRef.current = { ...stateRef.current, publicKey: pair.publicKey };
       }
       stateRef.current = { ...stateRef.current, joinedAt: Date.now() };
       setMe(stateRef.current);
@@ -488,7 +527,8 @@ export function useMeshRoom({
         })
         .on("broadcast", { event: "app" }, ({ payload }) => {
           const msg = payload as RoomMessage;
-          if (!msg.to || msg.to === myId) onMessageRef.current?.(msg, actions);
+          if (msg.type === "sealed") openSealed(msg);
+          else if (!msg.to || msg.to === myId) onMessageRef.current?.(msg, actions);
         })
         .on("presence", { event: "sync" }, () => {
           const state = ch.presenceState<Member>();
@@ -500,6 +540,7 @@ export function useMeshRoom({
                 name: m.name,
                 staff: !!m.staff,
                 secretHash: m.secretHash ?? "",
+                publicKey: m.publicKey ?? "",
                 joinedAt: m.joinedAt,
               };
             }
@@ -512,7 +553,9 @@ export function useMeshRoom({
               announceState();
             }, 300);
           }
-          for (const id of Object.keys(states)) if (!next[id]) delete states[id];
+          // Forget the state of people who left. Keep state from people we
+          // haven't seen arrive yet — it can come before their presence does.
+          for (const id of Object.keys(others)) if (!next[id]) delete states[id];
           others = next;
           setMembers(next);
           setLiveStates({ ...states });
@@ -521,8 +564,8 @@ export function useMeshRoom({
         .subscribe(async (s) => {
           if (cancelled) return;
           if (s === "SUBSCRIBED") {
-            const { name, staff, secretHash, joinedAt } = stateRef.current;
-            await ch.track({ name, staff, secretHash, joinedAt });
+            const { name, staff, secretHash, publicKey, joinedAt } = stateRef.current;
+            await ch.track({ name, staff, secretHash, publicKey, joinedAt });
             joined = true;
             announceState();
             setStatus("joined");
@@ -566,6 +609,7 @@ export function useMeshRoom({
     setHand: (up: boolean) => actionsRef.current?.setHand(up),
     setHost: (on: boolean) => actionsRef.current?.setHost(on),
     send: (msg: RoomMessage) => actionsRef.current?.send(msg),
+    sendPrivate: (to: string[], msg: RoomMessage) => actionsRef.current?.sendPrivate(to, msg),
   }));
 
   const participants: Participant[] = Object.entries(members)

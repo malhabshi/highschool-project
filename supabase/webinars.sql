@@ -225,3 +225,59 @@ grant execute on function guest_set_question_answered(text, text, uuid, boolean)
 grant execute on function guest_end_webinar(text, text) to anon, authenticated;
 
 notify pgrst, 'reload schema';
+
+-- ───────── Verified host keys (for private chat) ─────────
+-- Hosts register the public key their browser uses for encrypted messages:
+-- staff directly (logged in), guest hosts through their secret. Attendees only
+-- treat someone as a host if their key is listed here, so nobody can pose as
+-- a host to receive messages meant for the hosts.
+create table if not exists webinar_host_keys (
+  id uuid primary key default gen_random_uuid(),
+  webinar_id uuid not null references webinars(id) on delete cascade,
+  peer_id text not null,
+  public_key text not null check (length(public_key) <= 200),
+  secret_hash text, -- set for guest hosts; null for staff
+  created_at timestamptz not null default now(),
+  unique (webinar_id, peer_id)
+);
+alter table webinar_host_keys enable row level security;
+drop policy if exists "auth all" on webinar_host_keys;
+create policy "auth all" on webinar_host_keys
+  for all to authenticated using (true) with check (secret_hash is null);
+
+create or replace function get_webinar_host_keys(p_code text)
+returns table (peer_id text, public_key text)
+language sql stable security definer set search_path = public as $$
+  select k.peer_id, k.public_key
+  from webinar_host_keys k
+  join webinars w on w.id = k.webinar_id
+  where w.code = p_code and w.status <> 'ended'
+    and (k.secret_hash is null or exists (
+      select 1 from webinar_guest_hosts g
+      where g.webinar_id = w.id and g.secret_hash = k.secret_hash and not g.revoked));
+$$;
+
+create or replace function guest_register_host_key(
+  p_code text, p_secret text, p_peer_id text, p_public_key text
+) returns void
+language plpgsql security definer set search_path = public as $$
+declare w_id uuid := guest_host_webinar(p_code, p_secret);
+begin
+  if w_id is null then raise exception 'not a host'; end if;
+  if length(p_peer_id) > 64 or length(p_public_key) > 200 then
+    raise exception 'invalid key';
+  end if;
+  insert into webinar_host_keys (webinar_id, peer_id, public_key, secret_hash)
+  values (w_id, p_peer_id, p_public_key,
+          encode(sha256(convert_to(p_secret, 'UTF8')), 'hex'))
+  -- A guest may only update its own entry, never a staff host's.
+  on conflict (webinar_id, peer_id) do update
+    set public_key = excluded.public_key
+    where webinar_host_keys.secret_hash = excluded.secret_hash;
+end;
+$$;
+
+grant execute on function get_webinar_host_keys(text) to anon, authenticated;
+grant execute on function guest_register_host_key(text, text, text, text) to anon, authenticated;
+
+notify pgrst, 'reload schema';

@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { VideoTile } from "@/components/video-call";
-import type { Participant } from "@/lib/video-call";
+import type { Participant, RoomMessage } from "@/lib/video-call";
+import { uid } from "@/lib/uid";
 import { useActiveSpeaker } from "@/lib/active-speaker";
 import type { WebinarQuestion } from "@/lib/webinars";
+
+// "everyone": public (only hosts can send it). "panel": hosts and speakers.
+// "direct": one person. Panel and direct messages are end-to-end encrypted.
+export type ChatAudience = "everyone" | "panel" | "direct";
 
 export type ChatMessage = {
   id: string;
@@ -12,7 +17,127 @@ export type ChatMessage = {
   text: string;
   host: boolean;
   at: number;
+  audience: ChatAudience;
+  toName?: string; // direct messages: who it was sent to
+  fromId?: string; // sender's peer id (received messages)
+  mine?: boolean;
 };
+
+export type ChatTarget = { id: string; label: string; audience: ChatAudience; peerId?: string };
+
+// Who a person may write to. Hosts: everyone, the panel, or anyone.
+// Everyone else: the panel, or one (verified) host.
+export function chatTargets(
+  isHost: boolean,
+  others: Participant[],
+  verifiedHosts: Set<string>
+): ChatTarget[] {
+  const direct = (p: Participant): ChatTarget => ({
+    id: p.peerId,
+    label: verifiedHosts.has(p.peerId) ? `${p.name} (host)` : p.name,
+    audience: "direct",
+    peerId: p.peerId,
+  });
+  if (isHost) {
+    return [
+      { id: "everyone", label: "Everyone", audience: "everyone" },
+      { id: "panel", label: "Hosts & speakers", audience: "panel" },
+      ...others.filter((p) => p.publicKey).map(direct),
+    ];
+  }
+  return [
+    { id: "panel", label: "All hosts & speakers", audience: "panel" },
+    ...others.filter((p) => verifiedHosts.has(p.peerId)).map(direct),
+  ];
+}
+
+// The panel: verified hosts plus whoever is on stage speaking.
+export function panelPeers(others: Participant[], verifiedHosts: Set<string>): string[] {
+  return others
+    .filter((p) => p.publicKey && (verifiedHosts.has(p.peerId) || (p.onStage && !p.host)))
+    .map((p) => p.peerId);
+}
+
+type ChatRoom = {
+  send: (msg: RoomMessage) => void;
+  sendPrivate: (to: string[], msg: RoomMessage) => unknown;
+};
+
+// The chat log plus send/receive. `receive` goes in the room's onMessage;
+// it ignores "everyone" messages that don't come from a verified host.
+// `verifiedRef` holds the current verified-host peer ids (the room has to exist
+// before they're known, while `receive` is needed to create it).
+export function useWebinarChat(
+  name: string,
+  isHost: boolean,
+  verifiedRef: React.RefObject<Set<string>>
+) {
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  // Public messages from someone not (yet) verified as host. A real host's
+  // key check can lag a second or two behind their first message.
+  const held = useRef<{ m: RoomMessage; at: number }[]>([]);
+
+  const receive = useCallback((m: RoomMessage): boolean => {
+    if (m.type !== "chat") return true;
+    const audience = (m.audience as ChatAudience) ?? "everyone";
+    if (audience !== "everyone" && !m.sealed) return true; // private ones must be encrypted
+    if (audience === "everyone" && !verifiedRef.current.has(m.from ?? "")) {
+      held.current.push({ m, at: Date.now() });
+      return false;
+    }
+    const msg: ChatMessage = {
+      id: String(m.id),
+      name: String(m.name ?? ""),
+      text: String(m.text ?? "").slice(0, 500),
+      host: verifiedRef.current.has(m.from ?? ""),
+      at: Number(m.at) || Date.now(),
+      audience,
+      fromId: m.from,
+    };
+    setMessages((prev) => (prev.some((x) => x.id === msg.id) ? prev : [...prev, msg]));
+    return true;
+  }, [verifiedRef]);
+
+  // Call after the verified hosts change: delivers held messages whose sender
+  // is now verified, and forgets ones older than 15 s.
+  const releaseHeld = useCallback(() => {
+    const now = Date.now();
+    const waiting = held.current.filter((h) => now - h.at < 15000);
+    held.current = [];
+    for (const h of waiting) receive(h.m);
+  }, [receive]);
+
+  // Returns false if nobody is there to receive it.
+  function send(
+    room: ChatRoom,
+    text: string,
+    target: ChatTarget,
+    others: Participant[]
+  ): boolean {
+    const msg: ChatMessage = {
+      id: uid(),
+      name,
+      text,
+      host: isHost,
+      at: Date.now(),
+      audience: target.audience,
+      toName: target.audience === "direct" ? target.label : undefined,
+    };
+    const wire = { type: "chat", ...msg };
+    if (target.audience === "everyone") {
+      room.send(wire);
+    } else {
+      const to =
+        target.audience === "panel" ? panelPeers(others, verifiedRef.current) : [target.peerId!];
+      if (to.length === 0) return false;
+      room.sendPrivate(to, wire);
+    }
+    setMessages((prev) => [...prev, { ...msg, mine: true }]);
+    return true;
+  }
+
+  return { messages, receive, releaseHeld, send };
+}
 
 export type StageTile = Pick<Participant, "name" | "micOn" | "camOn" | "sharing"> & {
   key: string;
@@ -60,13 +185,19 @@ export function Stage({ tiles, empty }: { tiles: StageTile[]; empty: React.React
 
 export function ChatPanel({
   messages,
+  targets,
   onSend,
 }: {
   messages: ChatMessage[];
-  onSend: (text: string) => void;
+  targets: ChatTarget[];
+  onSend: (text: string, target: ChatTarget) => boolean;
 }) {
   const [text, setText] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [targetId, setTargetId] = useState(targets[0]?.id ?? "");
   const listRef = useRef<HTMLDivElement>(null);
+  // Keep the choice while it's still available (e.g. that person is here).
+  const target = targets.find((t) => t.id === targetId) ?? targets[0];
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
@@ -75,9 +206,19 @@ export function ChatPanel({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     const t = text.trim();
-    if (!t) return;
-    onSend(t.slice(0, 500));
-    setText("");
+    if (!t || !target) return;
+    if (onSend(t.slice(0, 500), target)) {
+      setText("");
+      setError(null);
+    } else {
+      setError("No one is here to receive this yet.");
+    }
+  }
+
+  function tag(m: ChatMessage) {
+    if (m.audience === "panel") return "to hosts & speakers";
+    if (m.audience === "direct") return m.mine ? `privately to ${m.toName}` : "privately to you";
+    return null;
   }
 
   return (
@@ -86,34 +227,78 @@ export function ChatPanel({
         {messages.length === 0 && (
           <p className="pt-8 text-center text-sm text-slate-400">No messages yet. Say hello 👋</p>
         )}
-        {messages.map((m) => (
-          <div key={m.id} className="text-sm">
-            <span className={`font-semibold ${m.host ? "text-blue-700" : "text-slate-800"}`}>
-              {m.name}
-              {m.host && (
-                <span className="ml-1 rounded bg-blue-100 px-1 py-0.5 text-[10px] font-medium uppercase text-blue-700">
-                  Host
+        {messages.map((m) => {
+          const label = tag(m);
+          const replyTo = !m.mine && m.fromId ? targets.find((t) => t.peerId === m.fromId) : undefined;
+          return (
+            <div
+              key={m.id}
+              className={`text-sm ${m.audience === "direct" ? "rounded-lg bg-violet-50 p-2" : m.audience === "panel" ? "rounded-lg bg-amber-50 p-2" : ""}`}
+            >
+              <span className={`font-semibold ${m.host ? "text-blue-700" : "text-slate-800"}`}>
+                {m.mine ? "You" : m.name}
+                {m.host && !m.mine && (
+                  <span className="ml-1 rounded bg-blue-100 px-1 py-0.5 text-[10px] font-medium uppercase text-blue-700">
+                    Host
+                  </span>
+                )}
+              </span>
+              {label && (
+                <span
+                  className={`ml-1.5 text-xs font-medium ${m.audience === "direct" ? "text-violet-700" : "text-amber-700"}`}
+                >
+                  🔒 {label}
                 </span>
+              )}{" "}
+              <span className="whitespace-pre-wrap break-words text-slate-700">{m.text}</span>
+              {replyTo && m.audience !== "everyone" && (
+                <button
+                  onClick={() => setTargetId(replyTo.id)}
+                  className="ml-2 text-xs font-medium text-blue-600 hover:underline"
+                >
+                  Reply
+                </button>
               )}
-            </span>{" "}
-            <span className="whitespace-pre-wrap break-words text-slate-700">{m.text}</span>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
-      <form onSubmit={submit} className="flex gap-2 border-t border-slate-200 p-3">
-        <input
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Type a message…"
-          maxLength={500}
-          className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-        />
-        <button
-          type="submit"
-          className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-        >
-          Send
-        </button>
+      <form onSubmit={submit} className="space-y-2 border-t border-slate-200 p-3">
+        {error && <p className="text-xs text-red-600">{error}</p>}
+        <label className="flex items-center gap-2 text-xs text-slate-500">
+          To:
+          <select
+            value={target?.id ?? ""}
+            onChange={(e) => {
+              setTargetId(e.target.value);
+              setError(null);
+            }}
+            className="min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700"
+          >
+            {targets.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex gap-2">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={
+              target?.audience === "everyone" ? "Message everyone…" : "Private message…"
+            }
+            maxLength={500}
+            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            Send
+          </button>
+        </div>
       </form>
     </div>
   );
