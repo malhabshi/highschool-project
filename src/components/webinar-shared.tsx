@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { VideoTile } from "@/components/video-call";
 import type { Participant } from "@/lib/video-call";
+import { useActiveSpeaker } from "@/lib/active-speaker";
 
 export type ChatMessage = {
   id: string;
@@ -15,11 +16,17 @@ export type ChatMessage = {
 export type StageTile = Pick<Participant, "name" | "micOn" | "camOn" | "sharing"> & {
   key: string;
   stream: MediaStream | null;
+  audioStream?: MediaStream | null; // if the mic isn't in `stream` (own screen share)
   isLocal?: boolean;
 };
 
-// The presenters' video. Whoever is sharing their screen gets the big spot.
+// The presenters' video. The big spot goes to whoever is sharing their
+// screen, otherwise to whoever is speaking (then the first tile, the host).
 export function Stage({ tiles, empty }: { tiles: StageTile[]; empty: React.ReactNode }) {
+  const speaker = useActiveSpeaker(
+    tiles.map((t) => ({ key: t.key, stream: t.audioStream ?? t.stream, micOn: t.micOn }))
+  );
+
   if (tiles.length === 0) {
     return (
       <div className="flex aspect-video items-center justify-center rounded-xl bg-slate-800 p-6 text-center text-slate-300">
@@ -27,33 +34,25 @@ export function Stage({ tiles, empty }: { tiles: StageTile[]; empty: React.React
       </div>
     );
   }
-  const ordered = [...tiles].sort((a, b) => Number(b.sharing) - Number(a.sharing));
-  const [main, ...rest] = ordered;
+  const main =
+    tiles.find((t) => t.sharing) ?? tiles.find((t) => t.key === speaker) ?? tiles[0];
+  // One grid with stable keys; the main tile is moved and enlarged with CSS
+  // only, so its <video> isn't remounted (which would cut the speaker's audio).
   return (
-    <div className="space-y-3">
-      <VideoTile
-        stream={main.stream}
-        name={main.name}
-        micOn={main.micOn}
-        camOn={main.camOn || main.sharing}
-        sharing={main.sharing}
-        isLocal={main.isLocal}
-      />
-      {rest.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-          {rest.map((t) => (
-            <VideoTile
-              key={t.key}
-              stream={t.stream}
-              name={t.name}
-              micOn={t.micOn}
-              camOn={t.camOn || t.sharing}
-              sharing={t.sharing}
-              isLocal={t.isLocal}
-            />
-          ))}
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      {tiles.map((t) => (
+        <div key={t.key} className={t === main ? "order-first col-span-2 sm:col-span-3" : ""}>
+          <VideoTile
+            stream={t.stream}
+            name={t.name}
+            micOn={t.micOn}
+            camOn={t.camOn || t.sharing}
+            sharing={t.sharing}
+            isLocal={t.isLocal}
+            speaking={tiles.length > 1 && t.key === speaker && t.micOn}
+          />
         </div>
-      )}
+      ))}
     </div>
   );
 }

@@ -135,6 +135,38 @@ export async function setWebinarStatus(id: string, status: WebinarStatus) {
   await supabase.from("webinars").update({ status }).eq("id", id);
 }
 
+export async function setWebinarHost(id: string, hostId: string) {
+  await supabase.from("webinars").update({ host_id: hostId }).eq("id", id);
+}
+
+// Live webinars the given staff member is the host of (for the sidebar badge
+// and the "you're hosting" banner — e.g. after a colleague hands one over).
+export function useMyLiveWebinars(userId: string) {
+  const [live, setLive] = useState<Webinar[]>([]);
+
+  const refetch = useCallback(async () => {
+    const { data } = await supabase
+      .from("webinars")
+      .select(WEBINAR_COLUMNS)
+      .eq("status", "live")
+      .eq("host_id", userId);
+    setLive((data ?? []).map((r) => toWebinar(r as Record<string, unknown>)));
+  }, [userId]);
+
+  useEffect(() => {
+    refetch();
+    const channel = supabase
+      .channel(`my-webinars-${uid()}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "webinars" }, () => refetch())
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [refetch]);
+
+  return live;
+}
+
 export function useWebinar(id: string) {
   const [webinar, setWebinar] = useState<Webinar | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -147,7 +179,18 @@ export function useWebinar(id: string) {
 
   useEffect(() => {
     refetch();
-  }, [refetch]);
+    const channel = supabase
+      .channel(`webinar-${id}-${uid()}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "webinars", filter: `id=eq.${id}` },
+        () => refetch()
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, refetch]);
 
   return { webinar, loaded, refetch };
 }

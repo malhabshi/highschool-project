@@ -5,12 +5,15 @@ import { usePathname } from "next/navigation";
 import { navItems } from "@/lib/nav";
 import { useRole } from "@/components/role-context";
 import { useUnreadCounts } from "@/lib/messages";
+import { useMyLiveWebinars } from "@/lib/webinars";
 import { BrandLogo } from "@/components/brand-logo";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { role } = useRole();
+  const { role, user } = useRole();
   const { total: unread } = useUnreadCounts();
+  // A live webinar I'm the host of (e.g. a colleague just handed it to me).
+  const hostingLive = useMyLiveWebinars(user.id).length > 0;
 
   // Only show menu items this role is allowed to see.
   const visibleItems = navItems.filter((item) => item.roles.includes(role));
@@ -44,6 +47,11 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
             >
               <span className="text-base">{item.icon}</span>
               {item.label}
+              {item.href === "/webinars" && hostingLive && (
+                <span className="ml-auto animate-pulse rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  LIVE
+                </span>
+              )}
               {item.href === badgeHref && unread > 0 && (
                 <span className="ml-auto rounded-full bg-red-600 px-2 py-0.5 text-xs font-semibold text-white">
                   {unread}

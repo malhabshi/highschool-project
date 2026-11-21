@@ -82,7 +82,7 @@ export type RoomActions = {
   toggleMic: () => void;
   toggleCam: () => void;
   toggleScreen: () => Promise<void>;
-  goOnStage: () => Promise<void>;
+  goOnStage: (opts?: { mic?: boolean; cam?: boolean }) => Promise<void>;
   leaveStage: () => void;
   setHand: (up: boolean) => void;
   send: (msg: RoomMessage) => void;
@@ -402,16 +402,22 @@ export function useMeshRoom({
         setOutgoingVideo(track);
         publish({ sharing: true });
       },
-      async goOnStage() {
+      // `mic: false` / `cam: false` join with that device switched off; it can
+      // be turned on later with the usual buttons.
+      async goOnStage(opts = {}) {
         if (stateRef.current.onStage) return;
         const stream = await acquireMedia();
         if (cancelled) {
           stream?.getTracks().forEach((t) => t.stop());
           return;
         }
+        const audio = stream?.getAudioTracks()[0];
+        const video = stream?.getVideoTracks()[0];
+        if (audio && opts.mic === false) audio.enabled = false;
+        if (video && opts.cam === false) video.enabled = false;
         local = stream;
         setLocalStream(stream);
-        publish({ onStage: true, hand: false, ...mediaState(stream) });
+        publish({ onStage: true, hand: false, micOn: !!audio?.enabled, camOn: !!video?.enabled });
         for (const peer of peers.values()) attachMedia(peer);
         reconcile();
       },
@@ -542,6 +548,7 @@ export function useMeshRoom({
     mediaError,
     me,
     localStream: screenStream ?? localStream,
+    micStream: localStream, // camera + mic, even while sharing the screen
     hasMic: !!localStream?.getAudioTracks().length,
     hasCam: !!localStream?.getVideoTracks().length,
     micOn: me.micOn,
@@ -551,7 +558,7 @@ export function useMeshRoom({
     toggleMic: () => actionsRef.current?.toggleMic(),
     toggleCam: () => actionsRef.current?.toggleCam(),
     toggleScreen: () => actionsRef.current?.toggleScreen(),
-    goOnStage: () => actionsRef.current?.goOnStage(),
+    goOnStage: (opts?: { mic?: boolean; cam?: boolean }) => actionsRef.current?.goOnStage(opts),
     leaveStage: () => actionsRef.current?.leaveStage(),
     setHand: (up: boolean) => actionsRef.current?.setHand(up),
     send: (msg: RoomMessage) => actionsRef.current?.send(msg),

@@ -9,6 +9,7 @@ import {
   deleteWebinar,
   formatWebinarTime,
   publicWebinarUrl,
+  useMyLiveWebinars,
   useWebinars,
   type Webinar,
 } from "@/lib/webinars";
@@ -16,6 +17,7 @@ import {
 export function WebinarsManager() {
   const { user, role } = useRole();
   const { webinars, counts, loaded, refetch } = useWebinars();
+  const hosting = useMyLiveWebinars(user.id);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [when, setWhen] = useState("");
@@ -54,6 +56,23 @@ export function WebinarsManager() {
 
   return (
     <div className="space-y-6">
+      {hosting.map((w) => (
+        <div
+          key={w.id}
+          className="flex flex-wrap items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4"
+        >
+          <span className="flex-1 text-sm text-red-800">
+            🔴 You&apos;re the host of <strong>{w.title}</strong> — it&apos;s live now.
+          </span>
+          <Link
+            href={`/webinars/${w.id}`}
+            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
+          >
+            Join as host
+          </Link>
+        </div>
+      ))}
+
       <form onSubmit={create} className="space-y-3 rounded-xl border border-slate-200 bg-white p-6">
         <h2 className="text-lg font-semibold text-slate-800">Schedule a webinar</h2>
         <div className="grid gap-3 md:grid-cols-2">

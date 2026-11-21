@@ -49,9 +49,14 @@ create policy "auth all" on webinars              for all to authenticated using
 create policy "auth all" on webinar_registrations for all to authenticated using (true) with check (true);
 create policy "auth all" on webinar_questions     for all to authenticated using (true) with check (true);
 
--- Live updates for the host's Q&A and registration lists.
+-- Live updates for the host's Q&A and registration lists, and for webinar
+-- status/host changes (e.g. handing a live webinar to a colleague).
 do $$
 begin
+  if not exists (select 1 from pg_publication_tables
+                 where pubname = 'supabase_realtime' and tablename = 'webinars') then
+    alter publication supabase_realtime add table webinars;
+  end if;
   if not exists (select 1 from pg_publication_tables
                  where pubname = 'supabase_realtime' and tablename = 'webinar_questions') then
     alter publication supabase_realtime add table webinar_questions;

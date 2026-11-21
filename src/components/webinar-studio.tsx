@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRole } from "@/components/role-context";
+import { useUsers } from "@/lib/users";
 import { Banner, ControlButton } from "@/components/video-call";
 import {
   ChatPanel,
@@ -18,6 +19,7 @@ import {
   WEBINAR_VIEWER_LIMIT,
   formatWebinarTime,
   publicWebinarUrl,
+  setWebinarHost,
   setWebinarStatus,
   useRegistrations,
   useWebinar,
@@ -69,6 +71,13 @@ export function WebinarStudio({ id }: { id: string }) {
     refetch();
   }
 
+  // Step out but keep the webinar live (optionally handing it to someone).
+  async function leave(newHostId: string | null) {
+    if (newHostId && newHostId !== webinar!.hostId) await setWebinarHost(webinar!.id, newHostId);
+    setInRoom(false);
+    refetch();
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -81,6 +90,7 @@ export function WebinarStudio({ id }: { id: string }) {
             <StatusBadge status={webinar.status} />
           </div>
           <p className="text-slate-500">{formatWebinarTime(webinar.scheduledAt)}</p>
+          {webinar.status !== "ended" && <HostPicker webinar={webinar} onChanged={refetch} />}
         </div>
         {webinar.status !== "ended" && (
           <button
@@ -93,7 +103,7 @@ export function WebinarStudio({ id }: { id: string }) {
       </div>
 
       {inRoom ? (
-        <HostRoom webinar={webinar} onEnd={endWebinar} />
+        <HostRoom webinar={webinar} onEnd={endWebinar} onLeave={leave} />
       ) : (
         <>
           {webinar.status !== "ended" && (
@@ -103,14 +113,14 @@ export function WebinarStudio({ id }: { id: string }) {
               </h2>
               <p className="mt-1 text-sm text-slate-500">
                 {webinar.status === "live"
-                  ? "Rejoin to continue presenting. Viewers are waiting on the public page."
+                  ? "Join to present. Viewers are waiting on the public page."
                   : "Going live turns on your camera and lets viewers in. Anyone opening the link early waits until you start."}
               </p>
               <button
                 onClick={goLive}
                 className="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
               >
-                {webinar.status === "live" ? "Rejoin as host" : "● Go live"}
+                {webinar.status === "live" ? "Join as host" : "● Go live"}
               </button>
             </div>
           )}
@@ -136,8 +146,17 @@ export function WebinarStudio({ id }: { id: string }) {
 
 type Tab = "chat" | "qa" | "people" | "registrations";
 
-function HostRoom({ webinar, onEnd }: { webinar: Webinar; onEnd: () => void }) {
+function HostRoom({
+  webinar,
+  onEnd,
+  onLeave,
+}: {
+  webinar: Webinar;
+  onEnd: () => void;
+  onLeave: (newHostId: string | null) => void;
+}) {
   const { user } = useRole();
+  const [leaving, setLeaving] = useState(false);
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [tab, setTab] = useState<Tab>("chat");
   const [seenChat, setSeenChat] = useState(0);
@@ -162,6 +181,7 @@ function HostRoom({ webinar, onEnd }: { webinar: Webinar; onEnd: () => void }) {
     {
       key: room.myId,
       stream: room.localStream,
+      audioStream: room.micStream,
       name: `${myName} (you)`,
       micOn: room.micOn,
       camOn: room.camOn,
@@ -197,6 +217,18 @@ function HostRoom({ webinar, onEnd }: { webinar: Webinar; onEnd: () => void }) {
 
   return (
     <div className="space-y-3">
+      {leaving && (
+        <LeaveDialog
+          webinar={webinar}
+          otherHostsPresent={room.participants.some((p) => p.host)}
+          onCancel={() => setLeaving(false)}
+          onLeave={(newHostId) => {
+            setLeaving(false);
+            room.send({ type: "host-away" });
+            onLeave(newHostId);
+          }}
+        />
+      )}
       {room.status === "error" && (
         <Banner tone="red">
           Couldn&apos;t connect to the webinar server. Check your connection and rejoin.
@@ -234,6 +266,12 @@ function HostRoom({ webinar, onEnd }: { webinar: Webinar; onEnd: () => void }) {
               active={room.sharing}
               label={room.sharing ? "🖥️ Stop sharing" : "🖥️ Share screen"}
             />
+            <button
+              onClick={() => setLeaving(true)}
+              className="rounded-lg bg-slate-600 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-500"
+            >
+              Leave
+            </button>
             <button
               onClick={end}
               className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700"
@@ -303,6 +341,103 @@ function HostRoom({ webinar, onEnd }: { webinar: Webinar; onEnd: () => void }) {
               <RegistrationsList webinarId={webinar.id} />
             </div>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Who hosts the webinar. The host (or an admin) can hand it to a colleague;
+// they'll see it highlighted under Webinars.
+function HostPicker({ webinar, onChanged }: { webinar: Webinar; onChanged: () => void }) {
+  const { user, role } = useRole();
+  const { users } = useUsers();
+  const canChange = role === "admin" || webinar.hostId === user.id;
+
+  if (!canChange) {
+    return <p className="text-sm text-slate-500">Host: {webinar.hostName || "—"}</p>;
+  }
+  return (
+    <label className="mt-1 flex items-center gap-2 text-sm text-slate-500">
+      Host:
+      <select
+        value={webinar.hostId ?? ""}
+        onChange={async (e) => {
+          await setWebinarHost(webinar.id, e.target.value);
+          onChanged();
+        }}
+        className="rounded-md border border-slate-300 bg-white px-2 py-1 text-sm text-slate-700"
+      >
+        {!webinar.hostId && <option value="">— Choose —</option>}
+        {users.map((u) => (
+          <option key={u.id} value={u.id}>
+            {u.name || u.email}
+            {u.id === user.id ? " (you)" : ""}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function LeaveDialog({
+  webinar,
+  otherHostsPresent,
+  onCancel,
+  onLeave,
+}: {
+  webinar: Webinar;
+  otherHostsPresent: boolean;
+  onCancel: () => void;
+  onLeave: (newHostId: string | null) => void;
+}) {
+  const { user } = useRole();
+  const { users } = useUsers();
+  const [next, setNext] = useState(webinar.hostId ?? user.id);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md space-y-4 rounded-xl bg-white p-6 shadow-xl">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Leave the webinar?</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            The webinar stays live for viewers.{" "}
+            {otherHostsPresent
+              ? "Another host is still presenting."
+              : "Until a host joins, viewers will see “The host will be right back”."}
+          </p>
+        </div>
+        <label className="block space-y-1 text-sm">
+          <span className="font-medium text-slate-700">Who should host it now?</span>
+          <select
+            value={next}
+            onChange={(e) => setNext(e.target.value)}
+            className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700"
+          >
+            {users.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name || u.email}
+                {u.id === user.id ? " (you — come back later)" : ""}
+              </option>
+            ))}
+          </select>
+          <span className="block text-xs text-slate-400">
+            They&apos;ll see a red LIVE badge on Webinars and can join from there.
+          </span>
+        </label>
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Stay
+          </button>
+          <button
+            onClick={() => onLeave(next)}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Leave
+          </button>
         </div>
       </div>
     </div>

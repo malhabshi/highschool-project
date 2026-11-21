@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/components/role-context";
 import { MESH_COMFORT_LIMIT, useVideoCall } from "@/lib/video-call";
+import { useActiveSpeaker } from "@/lib/active-speaker";
 
 export function VideoCall({ roomId }: { roomId: string }) {
   const { user } = useRole();
@@ -11,11 +12,40 @@ export function VideoCall({ roomId }: { roomId: string }) {
   const call = useVideoCall(roomId, user.name || user.email);
   const [copied, setCopied] = useState(false);
 
-  const count = call.participants.length + 1;
+  const tiles = [
+    {
+      key: "me",
+      stream: call.localStream,
+      audioStream: call.micStream,
+      name: `${user.name || "You"} (you)`,
+      micOn: call.micOn,
+      sharing: call.sharing,
+      camOn: call.camOn || call.sharing,
+      isLocal: true,
+    },
+    ...call.participants.map((p) => ({
+      key: p.peerId,
+      stream: p.stream,
+      audioStream: p.stream,
+      name: p.name,
+      micOn: p.micOn,
+      sharing: p.sharing,
+      camOn: p.camOn || p.sharing,
+      isLocal: false,
+    })),
+  ];
+  const speaker = useActiveSpeaker(
+    tiles.map((t) => ({ key: t.key, stream: t.audioStream, micOn: t.micOn }))
+  );
+  // A shared screen takes the full width at the top; everyone else stays in
+  // the grid. (CSS-only reordering, so no <video> gets remounted.)
+  const sharer = tiles.find((t) => t.sharing);
+
+  const count = tiles.length;
   const grid =
     count === 1
       ? "grid-cols-1"
-      : count <= 4
+      : count <= 4 && !sharer
         ? "grid-cols-1 sm:grid-cols-2"
         : "grid-cols-2 lg:grid-cols-3";
 
@@ -63,23 +93,18 @@ export function VideoCall({ roomId }: { roomId: string }) {
       )}
 
       <div className={`grid gap-3 ${grid}`}>
-        <VideoTile
-          stream={call.localStream}
-          name={`${user.name || "You"} (you)`}
-          micOn={call.micOn}
-          camOn={call.camOn || call.sharing}
-          sharing={call.sharing}
-          isLocal
-        />
-        {call.participants.map((p) => (
-          <VideoTile
-            key={p.peerId}
-            stream={p.stream}
-            name={p.name}
-            micOn={p.micOn}
-            camOn={p.camOn || p.sharing}
-            sharing={p.sharing}
-          />
+        {tiles.map((t) => (
+          <div key={t.key} className={t === sharer ? "order-first col-span-2 lg:col-span-3" : ""}>
+            <VideoTile
+              stream={t.stream}
+              name={t.name}
+              micOn={t.micOn}
+              camOn={t.camOn}
+              sharing={t.sharing}
+              isLocal={t.isLocal}
+              speaking={count > 1 && t.key === speaker && t.micOn}
+            />
+          </div>
         ))}
       </div>
 
@@ -127,6 +152,7 @@ export function VideoTile({
   camOn,
   sharing,
   isLocal = false,
+  speaking = false,
 }: {
   stream: MediaStream | null;
   name: string;
@@ -134,6 +160,7 @@ export function VideoTile({
   camOn: boolean;
   sharing: boolean;
   isLocal?: boolean;
+  speaking?: boolean;
 }) {
   const ref = useRef<HTMLVideoElement>(null);
 
@@ -150,7 +177,11 @@ export function VideoTile({
     .join("");
 
   return (
-    <div className="relative aspect-video overflow-hidden rounded-xl bg-slate-800">
+    <div
+      className={`relative aspect-video overflow-hidden rounded-xl bg-slate-800 ring-offset-2 transition-shadow ${
+        speaking ? "ring-4 ring-green-500" : ""
+      }`}
+    >
       {/* Keep the element mounted even with video off — it also plays the audio. */}
       <video
         ref={ref}

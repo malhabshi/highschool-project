@@ -286,6 +286,9 @@ function ViewerRoom({
   });
   const hosts = room.participants.filter((p) => p.host);
   const live = hosts.some((h) => h.onStage);
+  // Remember that it has started, so a host stepping away reads as a pause.
+  const [wasLive, setWasLive] = useState(false);
+  if (live && !wasLive) setWasLive(true);
 
   // Viewers are admitted in the order they arrived, up to the limit.
   const aheadOfMe = room.participants.filter(
@@ -308,6 +311,7 @@ function ViewerRoom({
           {
             key: room.myId,
             stream: room.localStream,
+            audioStream: room.micStream,
             name: `${name} (you)`,
             micOn: room.micOn,
             camOn: room.camOn,
@@ -338,9 +342,9 @@ function ViewerRoom({
     setQuestion("");
   }
 
-  function joinStage() {
+  function joinStage(withDevices: boolean) {
     setInvited(false);
-    room.goOnStage();
+    room.goOnStage(withDevices ? {} : { mic: false, cam: false });
   }
 
   function changeTab(t: Tab) {
@@ -361,12 +365,21 @@ function ViewerRoom({
       {room.mediaError && room.me.onStage && <Banner tone="amber">{room.mediaError}</Banner>}
       {invited && !room.me.onStage && (
         <div className="flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-          <span className="flex-1">🎤 The host invited you to speak. Your camera and mic will turn on.</span>
+          <span className="flex-1">
+            🎤 The host invited you to speak. You can mute yourself or turn your camera off at any
+            time.
+          </span>
           <button
-            onClick={joinStage}
+            onClick={() => joinStage(true)}
             className="rounded-lg bg-blue-600 px-3 py-1.5 font-medium text-white hover:bg-blue-700"
           >
             Join stage
+          </button>
+          <button
+            onClick={() => joinStage(false)}
+            className="rounded-lg border border-blue-300 bg-white px-3 py-1.5 font-medium text-blue-700 hover:bg-blue-100"
+          >
+            Join muted, camera off
           </button>
           <button
             onClick={() => setInvited(false)}
@@ -385,12 +398,19 @@ function ViewerRoom({
               room.status === "joining" ? (
                 "Connecting…"
               ) : (
-                <div>
-                  <p className="text-lg font-semibold text-white">Waiting for the host to start</p>
-                  <p className="mt-1 text-sm">
-                    Scheduled for {formatWebinarTime(webinar.scheduledAt)}. Keep this page open.
-                  </p>
-                </div>
+                wasLive ? (
+                  <div>
+                    <p className="text-lg font-semibold text-white">The host will be right back</p>
+                    <p className="mt-1 text-sm">Please stay on this page.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-lg font-semibold text-white">Waiting for the host to start</p>
+                    <p className="mt-1 text-sm">
+                      Scheduled for {formatWebinarTime(webinar.scheduledAt)}. Keep this page open.
+                    </p>
+                  </div>
+                )
               )
             }
           />
